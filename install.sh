@@ -1,10 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Set the database variable to the default first.
 # Don't forget to change this string to your actual database parameters
 # if you don't plan to initialize the database in this script.
-export LEMMY_DATABASE_URL=postgres://lemmy:password@localhost:5432/lemmy
+export LEMMY_DATABASE_URL=postgres://lemmy:lemmy@localhost:5432/lemmy
 
 # Set other environment variables
 export JWT_SECRET=changeme
@@ -63,7 +63,8 @@ ask_to_init_db
 # Build the web client
 cd ui
 yarn
-yarn build
+yarn start & # for development
+# yarn build # for production
 
 # Build and run the backend
 cd ../server
