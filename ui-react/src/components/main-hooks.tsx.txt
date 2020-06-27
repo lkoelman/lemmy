@@ -1,0 +1,607 @@
+import React, { Component, useState, useEffect } from 'react';
+
+import { Subscription } from 'rxjs';
+import { retryWhen, delay, take } from 'rxjs/operators';
+
+// TODO: replace by GraphQL queries
+import {
+  UserOperation,
+  CommunityUser,
+  GetFollowedCommunitiesResponse,
+  ListCommunitiesForm,
+  ListCommunitiesResponse,
+  Community,
+  SortType,
+  GetSiteResponse,
+  ListingType,
+  DataType,
+  SiteResponse,
+  GetPostsResponse,
+  PostResponse,
+  Post,
+  GetPostsForm,
+  Comment,
+  GetCommentsForm,
+  GetCommentsResponse,
+  CommentResponse,
+  AddAdminResponse,
+  BanUserResponse,
+  WebSocketJsonResponse,
+} from '../interfaces';
+
+import { WebSocketService, UserService } from '../services';
+
+// TODO: Components
+import { Sidebar } from './sidebar'
+import { PostListings } from './post-listings';
+import { CommentNodes } from './comment-nodes';
+import { SortSelect } from './sort-select';
+import { ListingTypeSelect } from './listing-type-select';
+import { DataTypeSelect } from './data-type-select';
+
+import {
+  wsJsonToRes,
+  fetchLimit,
+  toast,
+  getListingTypeFromProps,
+  getPageFromProps,
+  getSortTypeFromProps,
+  getDataTypeFromProps,
+  editCommentRes,
+  saveCommentRes,
+  createCommentLikeRes,
+  createPostLikeFindRes,
+  editPostFindRes,
+  commentsToFlatNodes,
+  setupTippy,
+} from '../utils';
+
+// Config
+import { i18n } from '../i18next';
+import { Trans } from 'react-i18next';
+
+/**
+ * Internal state of main page
+ */
+interface IMainState {
+  subscribedCommunities: Array<CommunityUser>;
+  trendingCommunities: Array<Community>;
+  siteRes: GetSiteResponse;
+  showEditSite: boolean;
+  loading: boolean;
+  posts: Array<Post>;
+  comments: Array<Comment>;
+  listingType: ListingType;
+  dataType: DataType;
+  sort: SortType;
+  page: number;
+}
+
+/**
+ * Create the main (front page) component.
+ * 
+ * @param props 
+ * @param context 
+ */
+export const Main: React.FC<any> = (props: any, context: any) => {
+
+  const initialState: IMainState = {
+    subscribedCommunities: [],
+    trendingCommunities: [],
+    siteRes: {
+      site: {
+        id: null,
+        name: null,
+        creator_id: null,
+        creator_name: null,
+        published: null,
+        number_of_users: null,
+        number_of_posts: null,
+        number_of_comments: null,
+        number_of_communities: null,
+        enable_downvotes: null,
+        open_registration: null,
+        enable_nsfw: null,
+      },
+      admins: [],
+      banned: [],
+      online: null,
+    },
+    showEditSite: false,
+    loading: true,
+    posts: [],
+    comments: [],
+    listingType: getListingTypeFromProps(props),
+    dataType: getDataTypeFromProps(props),
+    sort: getSortTypeFromProps(props),
+    page: getPageFromProps(props),
+  };
+
+  const [state, setState] = useState<IMainState>(initialState);
+
+
+  const subscription = WebSocketService.Instance.subject
+    .pipe(retryWhen(errors => errors.pipe(delay(3000), take(10))))
+    .subscribe(
+      msg => parseMessage(msg),
+      err => console.error(err),
+      () => console.log('complete')
+    );
+
+  WebSocketService.Instance.getSite();
+
+  if (UserService.Instance.user) {
+    WebSocketService.Instance.getFollowedCommunities();
+  }
+
+  let listCommunitiesForm: ListCommunitiesForm = {
+    sort: SortType[SortType.Hot],
+    limit: 6,
+  };
+
+  WebSocketService.Instance.listCommunities(listCommunitiesForm);
+
+
+  /**
+   * Replace lifecycle methods by hook.
+   */
+  useEffect(() => {
+    // No effect on mount
+    return () => {
+      subscription.unsubscribe(); // unmount
+    }
+  })
+
+  /**
+   * Hook for prop change
+   */
+  useEffect(() => {
+    if (
+      props.history.action == 'POP' ||
+      props.history.action == 'PUSH'
+    ) {
+      setState({
+        ...state,
+        listingType: getListingTypeFromProps(props),
+        dataType: getDataTypeFromProps(props),
+        sort: getSortTypeFromProps(props),
+        page: getPageFromProps(props),
+      })
+      fetchData();
+    }
+  }, props.history.action)
+
+
+  /**
+   * Update url displayed based on pagination/sorting changes.
+   */
+  const updateUrl = () => {
+    let listingTypeStr = ListingType[this.state.listingType].toLowerCase();
+    let dataTypeStr = DataType[this.state.dataType].toLowerCase();
+    let sortStr = SortType[this.state.sort].toLowerCase();
+    this.props.history.push(
+      `/home/data_type/${dataTypeStr}/listing_type/${listingTypeStr}/sort/${sortStr}/page/${this.state.page}`
+    );
+  }
+
+
+  const canAdmin: () => boolean = () => {
+    return (
+      UserService.Instance.user &&
+      state.siteRes.admins
+        .map(a => a.id)
+        .includes(UserService.Instance.user.id)
+    );
+  }
+
+  const handleEditClick = () => {
+    setState({ ...state, showEditSite: true });
+  }
+
+  const handleEditCancel = () => {
+    setState({ ...state, showEditSite: false });
+  }
+
+  const nextPage = () => {
+    setState({ ...state, page:state.page+1, loading:true })
+    updateUrl();
+    fetchData();
+    window.scrollTo(0, 0);
+  }
+
+  const prevPage = () => {
+    setState({ ...state, page:state.page-1, loading:true })
+    updateUrl();
+    fetchData();
+    window.scrollTo(0, 0);
+  }
+
+  const handleSortChange = (val: SortType) => {
+    setState({
+      ...state,
+      sort: val,
+      page: 1,
+      loading: true,
+    });
+    updateUrl();
+    fetchData();
+    window.scrollTo(0, 0);
+  }
+
+
+  const handleListingTypeChange = (val: ListingType) => {
+    setState({
+      ...state,
+      listingType: val,
+      page: 1,
+      loading: true,
+    });
+    updateUrl();
+    fetchData();
+    window.scrollTo(0, 0);
+  }
+
+  const handleDataTypeChange = (val: DataType) => {
+    setState({
+      ...state,
+      dataType: val,
+      page: 1,
+      loading: true,
+    });
+    updateUrl();
+    fetchData();
+    window.scrollTo(0, 0);
+  }
+
+  const fetchData = () => {
+    if (state.dataType == DataType.Post) {
+      let getPostsForm: GetPostsForm = {
+        page: state.page,
+        limit: fetchLimit,
+        sort: SortType[state.sort],
+        type_: ListingType[state.listingType],
+      };
+      WebSocketService.Instance.getPosts(getPostsForm);
+    } else {
+      let getCommentsForm: GetCommentsForm = {
+        page: state.page,
+        limit: fetchLimit,
+        sort: SortType[state.sort],
+        type_: ListingType[state.listingType],
+      };
+      WebSocketService.Instance.getComments(getCommentsForm);
+    }
+  }
+
+  const parseMessage = (msg: WebSocketJsonResponse) => {
+    console.log(msg);
+    let res = wsJsonToRes(msg);
+    if (msg.error) {
+      toast(i18n.t(msg.error), 'danger');
+      return;
+    } else if (msg.reconnect) {
+      fetchData();
+
+    } else if (res.op == UserOperation.GetFollowedCommunities) {
+      let data = res.data as GetFollowedCommunitiesResponse;
+      setState({
+        ...state,
+        subscribedCommunities: data.communities
+      });
+
+    } else if (res.op == UserOperation.ListCommunities) {
+      let data = res.data as ListCommunitiesResponse;
+      setState({
+        ...state,
+        trendingCommunities: data.communities
+      });
+
+    } else if (res.op == UserOperation.GetSite) {
+      let data = res.data as GetSiteResponse;
+
+      // This means it hasn't been set up yet
+      if (!data.site) {
+        context.router.history.push('/setup');
+      }
+      setState({
+        ...state,
+        siteRes : {
+          ...state.siteRes,
+          admins: data.admins,
+          site: data.site,
+          banned: data.banned,
+          online: data.online,
+        }
+      });
+      document.title = `${WebSocketService.Instance.site.name}`;
+
+    } else if (res.op == UserOperation.EditSite) {
+      let data = res.data as SiteResponse;
+      setState({
+        ...state,
+        showEditSite: false,
+        siteRes : {
+          ...state.siteRes,
+          site: data.site,
+        }
+      });
+      toast(i18n.t('site_saved'));
+
+    } else if (res.op == UserOperation.GetPosts) {
+      let data = res.data as GetPostsResponse;
+      setState({
+        ...state,
+        posts: data.posts,
+        loading: false,
+      });
+      setupTippy();
+
+      // TODO: finish updates setstate or use reduced
+      //  - https://reactjs.org/docs/hooks-reference.html#usereducer
+    } else if (res.op == UserOperation.CreatePost) {
+      let data = res.data as PostResponse;
+      let posts = state.posts;
+
+      // If you're on subscribed, only push it if you're subscribed.
+      if (state.listingType == ListingType.Subscribed) {
+        if (
+          state.subscribedCommunities
+            .map(c => c.community_id)
+            .includes(data.post.community_id)
+        ) {
+          posts.unshift(data.post);
+        }
+      } else {
+        // NSFW posts
+        let nsfw = data.post.nsfw || data.post.community_nsfw;
+
+        // Don't push the post if its nsfw, and don't have that setting on
+        if (
+          !nsfw ||
+          (nsfw &&
+            UserService.Instance.user &&
+            UserService.Instance.user.show_nsfw)
+        ) {
+          posts.unshift(data.post);
+        }
+      }
+      setState({
+        ...state,
+        posts: posts,
+      });
+
+    } else if (res.op == UserOperation.EditPost) {
+      let data = res.data as PostResponse;
+      editPostFindRes(data, state.posts);
+      setState({
+        ...state,
+        posts: state.posts,
+      });
+
+    } else if (res.op == UserOperation.CreatePostLike) {
+      let data = res.data as PostResponse;
+      createPostLikeFindRes(data, state.posts);
+      setState({
+        ...state,
+        posts: state.posts,
+      });
+
+    } else if (res.op == UserOperation.AddAdmin) {
+      let data = res.data as AddAdminResponse;
+      state.siteRes.admins = data.admins;
+      setState({
+        ...state,
+        siteRes : {
+          ...state.siteRes,
+          admins: data.admins,
+        }
+      });
+
+      // TODO: fix state updates below this line
+    } else if (res.op == UserOperation.BanUser) {
+      let data = res.data as BanUserResponse;
+      let found = state.siteRes.banned.find(u => (u.id = data.user.id));
+
+      // Remove the banned if its found in the list, and the action is an unban
+      if (found && !data.banned) {
+        state.siteRes.banned = state.siteRes.banned.filter(
+          i => i.id !== data.user.id
+        );
+      } else {
+        state.siteRes.banned.push(data.user);
+      }
+
+      state.posts
+        .filter(p => p.creator_id == data.user.id)
+        .forEach(p => (p.banned = data.banned));
+
+      setState(state);
+
+    } else if (res.op == UserOperation.GetComments) {
+      let data = res.data as GetCommentsResponse;
+      state.comments = data.comments;
+      state.loading = false;
+      setState(state);
+    } else if (res.op == UserOperation.EditComment) {
+      let data = res.data as CommentResponse;
+      editCommentRes(data, state.comments);
+      setState(state);
+    } else if (res.op == UserOperation.CreateComment) {
+      let data = res.data as CommentResponse;
+
+      // Necessary since it might be a user reply
+      if (data.recipient_ids.length == 0) {
+        // If you're on subscribed, only push it if you're subscribed.
+        if (state.listingType == ListingType.Subscribed) {
+          if (
+            state.subscribedCommunities
+              .map(c => c.community_id)
+              .includes(data.comment.community_id)
+          ) {
+            state.comments.unshift(data.comment);
+          }
+        } else {
+          state.comments.unshift(data.comment);
+        }
+        setState(state);
+      }
+    } else if (res.op == UserOperation.SaveComment) {
+      let data = res.data as CommentResponse;
+      saveCommentRes(data, state.comments);
+      setState(state);
+    } else if (res.op == UserOperation.CreateCommentLike) {
+      let data = res.data as CommentResponse;
+      createCommentLikeRes(data, state.comments);
+      setState(state);
+    }
+  }
+
+  fetchData();
+
+
+  const paginator = () => {
+    return (
+      <div className="my-2">
+        {state.page > 1 && (
+          <button
+            className="btn btn-sm btn-secondary mr-1"
+            onClick={prevPage}
+          >
+            {i18n.t('prev')}
+          </button>
+        )}
+        {state.posts.length == fetchLimit && (
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={nextPage}
+          >
+            {i18n.t('next')}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+
+  /**
+   * Lists either posts or comments depending on selected button.
+   */
+  const listings = () => {
+    return state.dataType == DataType.Post ? (
+      <PostListings
+        posts={state.posts}
+        showCommunity
+        removeDuplicates
+        sort={state.sort}
+      />
+    ) : (
+      <CommentNodes
+        nodes={commentsToFlatNodes(state.comments)}
+        noIndent
+        showCommunity
+        sortType={state.sort}
+        showContext
+      />
+    );
+  }
+
+  /**
+   * Selection buttons/dropdowns for displaying/sorting posts.
+   * 
+   * E.g. (Posts | comments), (subscribed | all), (hot | new | top)
+   */
+  const selects = () => {
+    return (
+      <div className="mb-3">
+        <span className="mr-3">
+          <DataTypeSelect
+            type_={state.dataType}
+            onChange={handleDataTypeChange}
+          />
+        </span>
+        <span className="mr-3">
+          <ListingTypeSelect
+            type_={state.listingType}
+            onChange={handleListingTypeChange}
+          />
+        </span>
+        <span className="mr-2">
+          <SortSelect sort={state.sort} onChange={handleSortChange} />
+        </span>
+        {state.listingType == ListingType.All && (
+          <a
+            href={`/feeds/all.xml?sort=${SortType[state.sort]}`}
+            target="_blank"
+            title="RSS"
+          >
+            <svg className="icon text-muted small">
+              <use xlinkHref="#icon-rss">#</use>
+            </svg>
+          </a>
+        )}
+        {UserService.Instance.user &&
+          state.listingType == ListingType.Subscribed && (
+            <a
+              href={`/feeds/front/${UserService.Instance.auth}.xml?sort=${
+                SortType[state.sort]
+              }`}
+              target="_blank"
+              title="RSS"
+            >
+              <svg className="icon text-muted small">
+                <use xlinkHref="#icon-rss">#</use>
+              </svg>
+            </a>
+          )}
+      </div>
+    );
+  }
+
+
+  const posts = () => {
+    return (
+      <div className="main-content-wrapper">
+        {selects()}
+        {state.loading ? (
+          <h5>
+            <svg className="icon icon-spinner spin">
+              <use xlinkHref="#icon-spinner"></use>
+            </svg>
+          </h5>
+        ) : (
+          <div>
+            {listings()}
+            {paginator()}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  
+  /**
+   * @override React.Component.render
+   */
+  return (
+    <div className="container">
+      <div className="row">
+        <main role="main" className="col-12 col-md-8">
+          {posts()}
+        </main>
+        <aside className="col-12 col-md-4">
+        <Sidebar
+              user={UserService.Instance.user}
+              subscribedCommunities={state.subscribedCommunities}
+              trendingCommunities={state.trendingCommunities}
+              loading={state.loading}
+              showEditSite={state.showEditSite}
+              siteRes={state.siteRes}
+              canAdmin={canAdmin}
+              handleEditCancel={handleEditCancel}
+              handleEditClick={handleEditClick} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+

@@ -1,0 +1,193 @@
+#-*- mode: org -*-
+#+TODO: TODO STARTED WAITING | DEFERRED DONE CANCELLED
+
+
+Development notes
+
+* STARTED Explore Lemmy
+
+** DONE Find components/code for upvoting
+
+- components/post-listing.tsx
+    - class PostListing
+        - render() -> listing() -> <button> -> onClick
+        - handlePostLike()
+
+** DONE Find out how to debug
+
+- use =yarn start= instead of =yarn build=
+    - the =start= script defined in /package.json/ calls =node fuse dev=
+    - /fuse-box/ is a webpack alternative and task runner
+    - =fuse.js= contains the task, and the =dev= task sets =isProduction =
+      false= and does not minify the code
+
+- in firefox, open developer console > Debugger and set break points
+
+* STARTED Simplify
+
+** DONE Substitute React equivalents for inferno
+   CLOSED: [2020-06-25 Thu 15:31]
+
+Port to react by doing following substitutions
+
+*** Substitutions
+
+Replace imports
+
+#+BEGIN_SRC typescript
+import React, { Component } from "react";
+import ReactDOM from "react-dom";
+import {
+    BrowserRouter,
+    Switch,
+    Route,
+    Link
+} from "react-router-dom";
+
+// Config
+import { i18n } from './i18next';
+import { Trans } from 'react-i18next'; // (T from 'inferno-i18next)
+#+END_SRC
+
+Replacements
+
+- ~class='...'~ ==> ~className='...'~
+    - also some html attributes must be converted to camelCase
+
+- ~style="a: x; b: y; c: z"~ -> ~style={{a: "x", b: "y", c: "z"}}~
+    - regex: ~style="(([\w-]+):([\w#]+);?)+"~
+
+- ~linkEvent~
+    - (option A) bind in constructor, then just function
+    - (option B) use public class field syntax (https://reactjs.org/docs/handling-events.html)
+      and define the method using arrow function
+    - Q: is this necessary in typescript?
+    - regex (single line): ~linkevent\([\s\r\n,\w]+(this\.\w+)[\s]*?\)~
+
+- **handlers**
+    - replace by arrow functions and remove ~x = x.bind(this)~ from constructors
+    - i.e. replace ~(i: ThisClass, event: any)~ -> ~(event: any) =>~
+    - regex: ~(handle[a-zA-Z]+)\([\w\s:,]+?event: any\)~ -> ~$1 = (event: any)~
+      =>
+
+- **inline svg**
+    - https://create-react-app.dev/docs/adding-images-fonts-and-files/
+
+
+** STARTED Use setState correctly
+
+- remove all ~public state~
+- use either of two forms of setState:
+https://reactjs.org/docs/react-component.html#setstate
+
+- regex: ~this\.state\.(\w+) = ([\w.]+)~ -> ~this.setState({ $1 : $2 })~
+
+- regex (nested): ~this\.state\.(\w+)\.(\w+) = ([\w.]+)~ ->
+    - => ~this.setState({ $1 : { ...this.state.$1, $2: $3} })~
+
+
+** TODO Use router correctly
+
+Check latest docs. If necessary: update props.
+
+** TODO Use props correctly
+
+E.g. replace <any> by merged RouterProps, Apollo props
+
+
+** STARTED Replace websocket requests + interfaces by GraphQL (Apollo)
+
+- https://www.apollographql.com/docs/react/get-started/
+- https://github.com/clintonwoo/hackernews-react-graphql
+- https://create-react-app.dev/docs/loading-graphql-files
+
+*** DONE create interfaces.graphql
+
+interface -> type
+type -> union
+([a-zA-Z]): -> $1!
+([a-zA-Z]): ([\w<>]+) -> $1: $2!
+// -> #
+Array<(\w+)> -> [$1]
+number(!?)$ -> Int$1
+
+*** TODO For classes, use old Apollo render props api (<= v2.5)
+
+Resources:
+https://www.apollographql.com/docs/react/v2.5
+https://www.apollographql.com/blog/introducing-react-apollo-2-1-c837cc23d926
+https://www.apollographql.com/docs/react/api/react-apollo/
+
+https://www.howtographql.com/react-apollo/1-getting-started/
+  - final code: https://github.com/howtographql/react-apollo/tree/master/src/components
+
+
+** DEFERRED Replace classes by functional + react hooks/useState
+   CLOSED: [2020-06-26 Fri 11:09]
+
+*** Apollo GraphQL
+
+For functional components use the ~useQuery~ hook instead
+(instead of the old Apollo render props api).
+
+*** Functional components (React.FC)
+
+- https://fettblog.eu/typescript-react/components/#functional-components
+    - outdated: use React.FC i.s.o. FunctionComponent
+    - React.FC + props type: "prefered way of using functional components in
+      TypeScript is by using the generic type"
+
+- https://levelup.gitconnected.com/using-react-functional-components-with-hooks-in-typescript-6d61075edddc
+    - ctrl+f "due to typescript generics"
+    - useState + generic: "We can solve this by using generics when working with hooks"
+
+- https://www.carlrippon.com/typed-usestate-with-typescript/
+    - useState + generics
+
+*** Hooks: tutorials
+
+Links:
+
+ https://github.com/rehooks/awesome-react-hooks
+
+Example code:
+
+https://github.com/jasminmif/react-interactive-paycard/blob/master/src/screens/MainScreen/components/card/index.js
+
+https://github.com/leahjlou/react-hooks-examples/blob/master/src/login-form/LoginForm.js
+
+(typescript + functional + hooks) https://github.com/clintonwoo/hackernews-react-graphql/blob/master/src/components/news-feed.tsx
+** TODO Replace RXJS by hooks or async/await
+
+- Polyfill using Babel?
+
+** DEFERRED OpenAPI approach
+
+*** Use OpenAPI spec + codegen to remove duplicate code
+
+- Official tool: https://github.com/openapitools/openapi-generator
+  - has npm wrapper:
+    - https://openapi-generator.tech/#try
+    - https://github.com/openapitools/openapi-generator#17---npm
+    - https://www.npmjs.com/package/@openapitools/openapi-generator-cli
+
+*** For rust
+
+- use Paperclip or OpenAPI generator
+
+*** For JS/TS
+
+- use official OpenAPI generatior
+    - options for JS: https://openapi-generator.tech/docs/generators/javascript/
+    - different TS generators for frameworks angular, axios, rxjs, ...
+      https://openapi-generator.tech/docs/generators
+
+- alternative:
+  https://github.com/progresso-group/openapi-typescript-client-api-generator
+    - also generates service using async/await + axios library
+
+- alternative: https://www.npmjs.com/package/openapi-generator
+- alternative: https://www.npmjs.com/package/typescript-openapi-generator
+
+
+
