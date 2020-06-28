@@ -16,25 +16,25 @@ import { i18n } from './i18next';
 import { Trans } from 'react-i18next';
 
 // Components
-import { Main } from './components/main';
-import { Navbar } from './components/navbar';
-import { Footer } from './components/footer';
-import { Login } from './components/login';
-import { CreatePost } from './components/create-post';
-import { CreateCommunity } from './components/create-community';
-import { CreatePrivateMessage } from './components/create-private-message';
-import { PasswordChange } from './components/password_change';
-import { Post } from './components/post';
-import { Community } from './components/community';
-import { Communities } from './components/communities';
-import { User } from './components/user';
-import { Modlog } from './components/modlog';
-import { Setup } from './components/setup';
-import { AdminSettings } from './components/admin-settings';
-import { Inbox } from './components/inbox';
-import { Search } from './components/search';
-import { Sponsors } from './components/sponsors';
-import { Symbols } from './components/symbols';
+import { Main } from './components/listings-page/main';
+import { Navbar } from './components/common/navbar';
+import { Footer } from './components/common/footer';
+import { Login } from './components/users/login';
+import { CreatePost } from './components/posts/create-post';
+import { CreateCommunity } from './components/communities/create-community';
+import { CreatePrivateMessage } from './components/messaging/create-private-message';
+import { PasswordChange } from './components/users/password_change';
+import { Post } from './components/posts/post';
+import { Community } from './components/listings-page/community';
+import { Communities } from './components/communities/communities';
+import { User } from './components/users/user';
+import { Modlog } from './components/common/modlog';
+import { Setup } from './components/users/setup';
+import { AdminSettings } from './components/communities/admin-settings';
+import { Inbox } from './components/messaging/inbox';
+import { Search } from './components/common/search';
+import { Sponsors } from './components/common/sponsors';
+import { Symbols } from './components/common/symbols';
 
 class Index extends Component<any, any> {
 

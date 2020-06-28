@@ -61,7 +61,7 @@ ask_to_auto_reload() {
 ask_to_init_db
 
 # Build the web client
-cd ui
+cd ui-react
 yarn
 yarn start & # for development
 # yarn build # for production
