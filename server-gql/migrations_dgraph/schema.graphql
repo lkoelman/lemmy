@@ -1,0 +1,305 @@
+# https://graphql.dgraph.io/schema
+
+# NOTES
+# - @search directives are only needed when we use the database directly
+#   as endpoint, to generate the GraphQL API (root Query) automatically.
+# - We use the Dgraph query language (GraphQL+-) in rust, 
+#   so @search directives are not needed. I.e. we use this graphql schema
+#   just as a shorthand to define the DB schema in an easier syntax.
+# - For information about the mapping of a GraphQL schema to the
+#   internal Dgraph schema, see https://graphql.dgraph.io/dgraph
+#   - predicates are named "Type.field"
+
+# transforming schema.rs to .graphql schema
+# - replace <xyz>_id by reference to target type (creates an edge)
+
+###############################################################################
+# Core types
+###############################################################################
+
+type Category {
+    id: ID!
+    name: String! @search(by: [term])
+}
+
+type User {
+    id: ID!
+    name: String!
+    fediName: String!
+    preferredUsername: String,
+    passwordEncrypted: String!
+    email: String,
+    avatar: String,
+    admin: Boolean!
+    banned: Boolean!
+    published: DateTime!
+    updated: DateTime,
+    showNsfw: Boolean!
+    theme: String!
+    defaultSortType: Int!
+    defaultListingType: Int!
+    lang: String!
+    showAvatars: Boolean!
+    sendNotificationsToEmail: Boolean!
+    matrixUserId: String,
+}
+
+type Post {
+    id: ID!
+    name: String!
+    url: String,
+    body: String,
+    creator: User!
+    community: Community!
+    removed: Boolean!
+    locked: Boolean!
+    published: DateTime!
+    updated: DateTime,
+    deleted: Boolean!
+    nsfw: Boolean!
+    stickied: Boolean!
+    embedTitle: String,
+    embedDescription: String,
+    embedHtml: String,
+    thumbnailUrl: String,
+}
+
+
+type Comment {
+    id: ID!
+    creator: User!
+    post: Post!
+    parent: Comment
+    content: String!
+    removed: Boolean!
+    read: Boolean!
+    published: DateTime!
+    updated: DateTime
+    deleted: Boolean!
+}
+
+type PrivateMessage {
+    id: ID!
+    creator: User!
+    recipient: User!
+    content: String!
+    deleted: Boolean!
+    read: Boolean!
+    published: DateTime!
+    updated: DateTime
+}
+
+
+type Site {
+    id: ID!
+    name: String!
+    description: String,
+    creator: User!
+    published: DateTime!
+    updated: DateTime,
+    enableDownvotes: Boolean!
+    openRegistration: Boolean!
+    enableNsfw: Boolean!
+}
+
+type Community {
+    id: ID!
+    name: String!
+    title: String!
+    description: String
+    category: Category
+    creator: User!
+    removed: Boolean!
+    published: DateTime!
+    updated: DateTime
+    deleted: Boolean!
+    nsfw: Boolean!
+}
+
+###############################################################################
+# Secondary types
+###############################################################################
+
+# TODO: represent some types as edges instead of nodes (with fields as facets)
+
+type CommentLike {
+    id: ID!
+    user: User!
+    comment: Comment
+    post: Post!
+    score: Int!
+    published: DateTime!
+}
+
+
+type CommentSaved {
+    id: ID!
+    comment: Comment
+    user: User!
+    published: DateTime!
+}
+
+
+type CommunityFollower {
+    id: ID!
+    community: Community!
+    user: User!
+    published: DateTime!
+}
+
+
+type CommunityModerator {
+    id: ID!
+    community: Community!
+    user: User!
+    published: DateTime!
+}
+
+
+type CommunityUserBan {
+    id: ID!
+    community: Community!
+    user: User!
+    published: DateTime!
+}
+
+
+type ModAdd {
+    id: ID!
+    modUser: User!
+    otherUser: User!
+    removed: Boolean,
+    when_: DateTime!
+}
+
+
+type ModAddCommunity {
+    id: ID!
+    modUser: User!
+    otherUser: User!
+    community: Community!
+    removed: Boolean,
+    when_: DateTime!
+}
+
+
+type ModBan {
+    id: ID!
+    modUser: User!
+    otherUser: User!
+    reason: String,
+    banned: Boolean,
+    expires: DateTime,
+    when_: DateTime!
+}
+
+
+type ModBanFromCommunity {
+    id: ID!
+    modUser: User!
+    otherUser: User!
+    community: Community!
+    reason: String,
+    banned: Boolean,
+    expires: DateTime,
+    when_: DateTime!
+}
+
+
+type ModLockPost {
+    id: ID!
+    modUser: User!
+    post: Post!
+    locked: Boolean,
+    when_: DateTime!
+}
+
+
+type ModRemoveComment {
+    id: ID!
+    modUser: User!
+    comment: Comment
+    reason: String,
+    removed: Boolean,
+    when_: DateTime!
+}
+
+
+type ModRemoveCommunity {
+    id: ID!
+    modUser: User!
+    community: Community!
+    reason: String,
+    removed: Boolean,
+    expires: DateTime,
+    when_: DateTime!
+}
+
+
+type ModRemovePost {
+    id: ID!
+    modUser: User!
+    post: Post!
+    reason: String,
+    removed: Boolean,
+    when_: DateTime!
+}
+
+
+type ModStickyPost {
+    id: ID!
+    modUser: User!
+    post: Post!
+    stickied: Boolean,
+    when_: DateTime!
+}
+
+
+type PasswordResetRequest {
+    id: ID!
+    user: User!
+    tokenEncrypted: String!
+    published: DateTime!
+}
+
+
+type PostLike {
+    id: ID!
+    post: Post!
+    user: User!
+    score: Int!
+    published: DateTime!
+}
+
+
+type PostRead {
+    id: ID!
+    post: Post!
+    user: User!
+    published: DateTime!
+}
+
+
+type PostSaved {
+    id: ID!
+    post: Post!
+    user: User!
+    published: DateTime!
+}
+
+
+
+type UserBan {
+    id: ID!
+    user: User!
+    published: DateTime!
+}
+
+
+type UserMention {
+    id: ID!
+    recipient: User!
+    comment: Comment
+    read: Boolean!
+    published: DateTime!
+}

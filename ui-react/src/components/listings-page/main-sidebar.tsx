@@ -11,12 +11,7 @@ import {
   User,
   Community,
   CommunityUser,
-  SortType,
   GetSiteResponse,
-  ListingType,
-  DataType,
-  PostResponse,
-  Post,
 } from '../../interfaces';
 
 // Components

@@ -38,18 +38,18 @@ import { Symbols } from './components/common/symbols';
 
 class Index extends Component<any, any> {
 
-  private client: ApolloClient<any>;
+  // private client: ApolloClient<any>;
 
   constructor(props: any, context: any) {
     super(props, context);
 
-    this.client = GraphQlService.Instance.client;
+    // this.client = GraphQlService.Instance.client;
   }
 
   render() {
     return (
       <Trans>
-        <ApolloProvider client={this.client}>
+        {/* <ApolloProvider client={this.client}> */}
         <BrowserRouter>
           <div>
             <Navbar />
@@ -113,7 +113,7 @@ class Index extends Component<any, any> {
             <Footer />
           </div>
         </BrowserRouter>
-        </ApolloProvider>
+        {/* </ApolloProvider> */}
       </Trans>
     );
   }

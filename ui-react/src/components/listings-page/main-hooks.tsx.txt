@@ -27,14 +27,14 @@ import {
   AddAdminResponse,
   BanUserResponse,
   WebSocketJsonResponse,
-} from '../interfaces';
+} from '../../interfaces';
 
-import { WebSocketService, UserService } from '../services';
+import { WebSocketService, UserService } from '../../services';
 
 // TODO: Components
-import { Sidebar } from './sidebar'
-import { PostListings } from './post-listings';
-import { CommentNodes } from './comment-nodes';
+import { Sidebar } from './main-sidebar'
+import { PostListings } from '../posts/post-listings';
+import { CommentNodes } from '../comments//comment-nodes';
 import { SortSelect } from './sort-select';
 import { ListingTypeSelect } from './listing-type-select';
 import { DataTypeSelect } from './data-type-select';
@@ -54,10 +54,10 @@ import {
   editPostFindRes,
   commentsToFlatNodes,
   setupTippy,
-} from '../utils';
+} from '../../utils';
 
 // Config
-import { i18n } from '../i18next';
+import { i18n } from '../../i18next';
 import { Trans } from 'react-i18next';
 
 /**
@@ -83,7 +83,8 @@ interface IMainState {
  * @param props 
  * @param context 
  */
-export const Main: React.FC<any> = (props: any, context: any) => {
+export const Main: React.FC<any> = (props: any) => {
+  // TODO: how to use react router (and get context var) in a functional component?
 
   const initialState: IMainState = {
     subscribedCommunities: [],
@@ -167,7 +168,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
         sort: getSortTypeFromProps(props),
         page: getPageFromProps(props),
       })
-      fetchData();
+      requestContent();
     }
   }, props.history.action)
 
@@ -179,7 +180,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
     let listingTypeStr = ListingType[this.state.listingType].toLowerCase();
     let dataTypeStr = DataType[this.state.dataType].toLowerCase();
     let sortStr = SortType[this.state.sort].toLowerCase();
-    this.props.history.push(
+    props.history.push(
       `/home/data_type/${dataTypeStr}/listing_type/${listingTypeStr}/sort/${sortStr}/page/${this.state.page}`
     );
   }
@@ -205,14 +206,14 @@ export const Main: React.FC<any> = (props: any, context: any) => {
   const nextPage = () => {
     setState({ ...state, page:state.page+1, loading:true })
     updateUrl();
-    fetchData();
+    requestContent();
     window.scrollTo(0, 0);
   }
 
   const prevPage = () => {
     setState({ ...state, page:state.page-1, loading:true })
     updateUrl();
-    fetchData();
+    requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -224,7 +225,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       loading: true,
     });
     updateUrl();
-    fetchData();
+    requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -237,7 +238,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       loading: true,
     });
     updateUrl();
-    fetchData();
+    requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -249,11 +250,11 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       loading: true,
     });
     updateUrl();
-    fetchData();
+    requestContent();
     window.scrollTo(0, 0);
   }
 
-  const fetchData = () => {
+  const requestContent = () => {
     if (state.dataType == DataType.Post) {
       let getPostsForm: GetPostsForm = {
         page: state.page,
@@ -280,7 +281,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       toast(i18n.t(msg.error), 'danger');
       return;
     } else if (msg.reconnect) {
-      fetchData();
+      requestContent();
 
     } else if (res.op == UserOperation.GetFollowedCommunities) {
       let data = res.data as GetFollowedCommunitiesResponse;
@@ -301,7 +302,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
 
       // This means it hasn't been set up yet
       if (!data.site) {
-        context.router.history.push('/setup');
+        this.props.history.push('/setup');
       }
       setState({
         ...state,
@@ -422,10 +423,12 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       state.comments = data.comments;
       state.loading = false;
       setState(state);
+
     } else if (res.op == UserOperation.EditComment) {
       let data = res.data as CommentResponse;
       editCommentRes(data, state.comments);
       setState(state);
+
     } else if (res.op == UserOperation.CreateComment) {
       let data = res.data as CommentResponse;
 
@@ -449,6 +452,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
       let data = res.data as CommentResponse;
       saveCommentRes(data, state.comments);
       setState(state);
+
     } else if (res.op == UserOperation.CreateCommentLike) {
       let data = res.data as CommentResponse;
       createCommentLikeRes(data, state.comments);
@@ -456,7 +460,7 @@ export const Main: React.FC<any> = (props: any, context: any) => {
     }
   }
 
-  fetchData();
+  requestContent();
 
 
   const paginator = () => {

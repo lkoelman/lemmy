@@ -1,0 +1,142 @@
+/**
+ * A test module where types are defined in a .graphql file
+ * 
+ * DEPRECATED
+ */
+
+#![allow(dead_code, unused_variables, unused_imports)]
+
+use juniper_from_schema::graphql_schema_from_file;
+use juniper::{FieldResult, Executor, RootNode};
+use dgraph_tonic::Client; // DB client
+
+/// Generate an API error with message
+#[derive(Fail, Debug)]
+#[fail(display = "{{\"error\":\"{}\"}}", message)]
+pub struct APIError {
+  pub message: String,
+}
+
+impl APIError {
+  pub fn err(msg: &str) -> Self {
+    APIError {
+      message: msg.to_string(),
+    }
+  }
+}
+
+// TODO: not clear if you need to declare graphql types again
+// some exampled indicate you don't. Try compiling both with and without
+//  - (some types declared) https://github.com/davidpdrsn/juniper-from-schema/blob/master/juniper-from-schema/examples/input_types.rs
+//  - (some types declared) https://github.com/davidpdrsn/juniper-from-schema/blob/master/juniper-from-schema/examples/default_argument_values.rs
+//  - it seems only if the type T is used inside FieldResult<T> or QueryTrail<'_, T, ...>
+
+// NOTE: camelCase is converted to snake_case
+// NOTE: generic arguments for QueryTrail are described here:
+//  - https://docs.rs/juniper-from-schema/0.5.2/juniper_from_schema/#types
+
+graphql_schema_from_file!("src/api/schema-camelcase.graphql");
+
+// TODO: encapsulate db connection, use it in field resolvers
+// - note: context instantiated in routes::api::graphql() function
+// - context dcs: https://graphql-rust.github.io/types/objects/using_contexts.html
+// -  you can pass global objects by doing App.data(..) and use a web::data<Class>
+//    extractor in the graphql handler function
+//     - https://docs.rs/actix-web/2.0.0/actix_web/struct.App.html#method.data
+//     - https://actix.rs/docs/extractors/
+// - good example: https://github.com/davidpdrsn/graphql-app-example/blob/master/src/graphql.rs
+// pub struct Context {
+//     // db connection field
+// }
+// impl juniper::Context for Context {}
+impl juniper::Context for Client {}
+
+// Declare schema types (defined in .graphql file)
+pub struct Query;
+pub struct Mutation;
+
+// NOTE: Schema is defined by macro
+// pub type Schema = RootNode<'static, Query, Mutation>;
+
+
+// Resolvers for GraphQL queries
+impl QueryFields for Query {
+
+    fn field_get_comments(
+        &self,
+        executor: &Executor<'_, Client>,
+        trail: &QueryTrail<'_, GetCommentsResponse, Walked>,
+        form: GetCommentForm,
+    ) -> FieldResult<Option<GetCommentsResponse>> {
+        // TODO: let ctx = &executor.context();
+        // do something with context
+        unimplemented!()
+    }
+}
+
+// Resolvers for GraphQL mutations
+impl MutationFields for Query {
+
+    fn field_create_comment(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, CommentResponse, Walked>,
+        form: CommentForm,
+    ) -> FieldResult<Option<CommentResponse>> {
+        unimplemented!()
+    }
+
+    fn field_edit_comment(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, CommentResponse, Walked>,
+        form: CommentForm,
+    ) -> FieldResult<Option<CommentResponse>> {
+        unimplemented!()
+    }
+
+    fn field_save_comment(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, CommentResponse, Walked>,
+        form: SaveCommentForm,
+    ) -> FieldResult<Option<CommentResponse>> {
+        unimplemented!()
+    }
+
+    fn field_like_comment(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, CommentResponse, Walked>,
+        form: LikeCommentForm,
+    ) -> FieldResult<Option<CommentResponse>> {
+        unimplemented!()
+    }
+
+    fn field_get_replies(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, GetRepliesResponse, Walked>,
+        form: GetRepliesForm,
+    ) -> FieldResult<Option<GetRepliesResponse>> {
+        unimplemented!()
+    }
+
+    fn field_get_replies(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, GetUserMentionsResponse, Walked>,
+        form: GetUserMentionsForm,
+    ) -> FieldResult<Option<GetUserMentionsResponse>> {
+        unimplemented!()
+    }
+
+    fn field_edit_user_mentions(
+        &self,
+        executor: &Executor<'_, Context>,
+        trail: &QueryTrail<'_, EditUserMentionsResponse, Walked>,
+        form: EditUserMentionsForm,
+    ) -> FieldResult<Option<EditUserMentionsResponse>> {
+        unimplemented!()
+    }
+}

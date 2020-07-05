@@ -1,0 +1,842 @@
+schema {
+  query : Query
+  mutation : Mutation,   
+}
+
+# TODO: replace 'Status' type
+
+type Query {
+  # Comments
+  getComments(form: GetCommentsForm): GetCommentsResponse
+}
+
+type Mutation {
+  # Comments (original: comment.rs)
+  createComment(form: CommentForm!): CommentResponse!
+  editComment(form: CommentForm!): CommentResponse!
+  saveComment(form: SaveCommentForm!): CommentResponse
+  likeComment(form: CommentLikeForm): CommentResponse
+  getReplies(form: GetRepliesForm!): GetRepliesResponse!
+  getUserMentions(form: GetUserMentionsForm!): GetUserMentionsResponse!
+  editUserMentions(form: EditUserMentionForm): Status!
+
+  # Posts
+
+  # Communities (original: community.rs)
+  # getCommunity(form: GetCommunityForm!): GetCommunityResponse!
+  # createCommunity(form: CommunityForm!): CommunityResponse!
+  # editCommunity(form: CommunityForm!): CommunityResponse!
+  # listCommunities(form: ListCommunitiesForm!): listCommunities!
+  # followCommunity(form: FollowCommunityForm!): Status
+  # getFollowedCommunities(form: GetFollowedCommunitiesForm!): GetFollowedCommunitiesResponse!
+  # banFromCommunity(form: BanFromCommunityForm!): BanFromCommunityResponse!
+  # addModToCommunity(form: AddModToCommunityForm!): AddModToCommunityResponse!
+  # transferCommunity(form: TransferCommunityForm!): Status
+  
+
+  # User
+  # getuserDetails(form:GetUserDetailsForm!): UserDetailsResponse!
+  # loginUser(form: LoginForm!): LoginResponse!
+  # registerUser(form: RegisterForm!): Status
+  # saveUserSettings(form: UserSettingsForm!): Status
+
+  # Site
+  # getModLog(form: GetModlogForm!): GetModlogResponse!
+  # transferSite(form:TransferSiteForm): Status
+}
+
+type Status {
+  code: Int
+}
+
+enum CommentSortType {
+  Hot
+  Top
+  New
+  Old
+}
+
+enum ListingType {
+  All
+  Subscribed
+  Community
+}
+
+enum DataType {
+  Post
+  Comment
+}
+
+enum SortType {
+  Hot
+  New
+  TopDay
+  TopWeek
+  TopMonth
+  TopYear
+  TopAll
+}
+
+enum SearchType {
+  All
+  Comments
+  Posts
+  Communities
+  Users
+  Url
+}
+
+type User {
+  id: Int!
+  iss: String!
+  username: String!
+  show_nsfw: Boolean!
+  theme: String!
+  default_sort_type: SortType!
+  default_listing_type: ListingType!
+  lang: String!
+  avatar: String
+  show_avatars: Boolean!
+  unreadCount: Int
+}
+
+type UserView {
+  id: Int!
+  name: String!
+  avatar: String
+  email: String
+  matrix_user_id: String
+  published: String!
+  number_of_posts: Int!
+  post_score: Int!
+  number_of_comments: Int!
+  comment_score: Int!
+  banned: Boolean!
+  show_avatars: Boolean!
+  send_notifications_to_email: Boolean!
+}
+
+type CommunityUser {
+  id: Int!
+  user_id: Int!
+  user_name: String!
+  avatar: String
+  community_id: Int!
+  community_name: String!
+  published: String!
+}
+
+type Community {
+  id: Int!
+  name: String!
+  title: String!
+  description: String
+  category_id: Int!
+  creator_id: Int!
+  removed: Boolean!
+  deleted: Boolean!
+  nsfw: Boolean!
+  published: String!
+  updated: String
+  creator_name: String!
+  creator_avatar: String
+  category_name: String!
+  number_of_subscribers: Int!
+  number_of_posts: Int!
+  number_of_comments: Int!
+  user_id: Int
+  subscribed: Boolean
+}
+
+type Post {
+  id: Int!
+  name: String!
+  url: String
+  body: String
+  creator_id: Int!
+  community_id: Int!
+  removed: Boolean!
+  deleted: Boolean!
+  locked: Boolean!
+  stickied: Boolean!
+  embed_title: String
+  embed_description: String
+  embed_html: String
+  thumbnail_url: String
+  nsfw: Boolean!
+  banned: Boolean!
+  banned_from_community: Boolean!
+  published: String!
+  updated: String
+  creator_name: String!
+  creator_avatar: String
+  community_name: String!
+  community_removed: Boolean!
+  community_deleted: Boolean!
+  community_nsfw: Boolean!
+  number_of_comments: Int!
+  score: Int!
+  upvotes: Int!
+  downvotes: Int!
+  hot_rank: Int!
+  newest_activity_time: String!
+  user_id: Int
+  my_vote: Int
+  my_tags: [String]
+  subscribed: Boolean
+  read: Boolean
+  saved: Boolean
+  duplicates: [Post]
+}
+
+type Comment {
+  id: Int!
+  creator_id: Int!
+  post_id: Int!
+  parent_id: Int
+  content: String!
+  removed: Boolean!
+  deleted: Boolean!
+  read: Boolean!
+  published: String!
+  updated: String
+  community_id: Int!
+  community_name: String!
+  banned: Boolean!
+  banned_from_community: Boolean!
+  creator_name: String!
+  creator_avatar: String
+  score: Int!
+  upvotes: Int!
+  downvotes: Int!
+  hot_rank: Int!
+  user_id: Int
+  my_vote: Int
+  subscribed: Int
+  saved: Boolean
+  user_mention_id: number # For mention type
+  recipient_id: Int
+  depth: Int
+}
+
+type Category {
+  id: Int!
+  name: String!
+}
+
+type Site {
+  id: Int!
+  name: String!
+  description: String
+  creator_id: Int!
+  published: String!
+  updated: String
+  creator_name: String!
+  number_of_users: Int!
+  number_of_posts: Int!
+  number_of_comments: Int!
+  number_of_communities: Int!
+  enable_downvotes: Boolean!
+  open_registration: Boolean!
+  enable_nsfw: Boolean!
+}
+
+type PrivateMessage {
+  id: Int!
+  creator_id: Int!
+  recipient_id: Int!
+  content: String!
+  deleted: Boolean!
+  read: Boolean!
+  published: String!
+  updated: String
+  creator_name: String!
+  creator_avatar: String
+  recipient_name: String!
+  recipient_avatar: String
+}
+
+enum BanType {
+  Community
+  Site
+}
+
+input FollowCommunityForm {
+  community_id: Int!
+  follow: Boolean!
+  auth: String
+}
+
+input GetFollowedCommunitiesForm {
+  auth: String!
+}
+
+type GetFollowedCommunitiesResponse {
+  communities: [CommunityUser]!
+}
+
+input GetUserDetailsForm {
+  user_id: Int
+  username: String
+  sort: String!
+  page: Int
+  limit: Int
+  community_id: Int
+  saved_only: Boolean!
+}
+
+type UserDetailsResponse {
+  user: UserView!
+  follows: [CommunityUser]!
+  moderates: [CommunityUser]!
+  comments: [Comment]!
+  posts: [Post]!
+  admins: [UserView]!
+}
+
+input GetRepliesForm {
+  sort: String!
+  page: Int
+  limit: Int
+  unread_only: Boolean!
+  auth: String
+}
+
+type GetRepliesResponse {
+  replies: [Comment]!
+}
+
+input GetUserMentionsForm {
+  sort: String!
+  page: Int
+  limit: Int
+  unread_only: Boolean!
+  auth: String
+}
+
+type GetUserMentionsResponse {
+  mentions: [Comment]!
+}
+
+input EditUserMentionForm {
+  user_mention_id: Int!
+  read: Boolean
+  auth: String
+}
+
+type UserMentionResponse {
+  mention: Comment!
+}
+
+input BanFromCommunityForm {
+  community_id: Int!
+  user_id: Int!
+  ban: Boolean!
+  reason: String
+  expires: Int
+  auth: String
+}
+
+type BanFromCommunityResponse {
+  user: UserView!
+  banned: Boolean!
+}
+
+input AddModToCommunityForm {
+  community_id: Int!
+  user_id: Int!
+  added: Boolean!
+  auth: String
+}
+
+input TransferCommunityForm {
+  community_id: Int!
+  user_id: Int!
+  auth: String
+}
+
+input TransferSiteForm {
+  user_id: Int!
+  auth: String
+}
+
+type AddModToCommunityResponse {
+  moderators: [CommunityUser]!
+}
+
+input GetModlogForm {
+  mod_user_id: Int
+  community_id: Int
+  page: Int
+  limit: Int
+}
+
+type GetModlogResponse {
+  removed_posts: [ModRemovePost]!
+  locked_posts: [ModLockPost]!
+  stickied_posts: [ModStickyPost]!
+  removed_comments: [ModRemoveComment]!
+  removed_communities: [ModRemoveCommunity]!
+  banned_from_community: [ModBanFromCommunity]!
+  banned: [ModBan]!
+  added_to_community: [ModAddCommunity]!
+  added: [ModAdd]!
+}
+
+type ModRemovePost {
+  id: Int!
+  mod_user_id: Int!
+  post_id: Int!
+  reason: String
+  removed: Boolean
+  when_: String
+  mod_user_name: String!
+  post_name: String!
+  community_id: Int!
+  community_name: String!
+}
+
+type ModLockPost {
+  id: Int!
+  mod_user_id: Int!
+  post_id: Int!
+  locked: Boolean
+  when_: String
+  mod_user_name: String!
+  post_name: String!
+  community_id: Int!
+  community_name: String!
+}
+
+type ModStickyPost {
+  id: Int!
+  mod_user_id: Int!
+  post_id: Int!
+  stickied: Boolean
+  when_: String
+  mod_user_name: String!
+  post_name: String!
+  community_id: Int!
+  community_name: String!
+}
+
+type ModRemoveComment {
+  id: Int!
+  mod_user_id: Int!
+  comment_id: Int!
+  reason: String
+  removed: Boolean
+  when_: String
+  mod_user_name: String!
+  comment_user_id: Int!
+  comment_user_name: String!
+  comment_content: String!
+  post_id: Int!
+  post_name: String!
+  community_id: Int!
+  community_name: String!
+}
+
+type ModRemoveCommunity {
+  id: Int!
+  mod_user_id: Int!
+  community_id: Int!
+  reason: String
+  removed: Boolean
+  expires: Int
+  when_: String
+  mod_user_name: String!
+  community_name: String!
+}
+
+type ModBanFromCommunity {
+  id: Int!
+  mod_user_id: Int!
+  other_user_id: Int!
+  community_id: Int!
+  reason: String
+  banned: Boolean
+  expires: Int
+  when_: String
+  mod_user_name: String!
+  other_user_name: String!
+  community_name: String!
+}
+
+type ModBan {
+  id: Int!
+  mod_user_id: Int!
+  other_user_id: Int!
+  reason: String
+  banned: Boolean
+  expires: Int
+  when_: String
+  mod_user_name: String!
+  other_user_name: String!
+}
+
+type ModAddCommunity {
+  id: Int!
+  mod_user_id: Int!
+  other_user_id: Int!
+  community_id: Int!
+  removed: Boolean
+  when_: String
+  mod_user_name: String!
+  other_user_name: String!
+  community_name: String!
+}
+
+type ModAdd {
+  id: Int!
+  mod_user_id: Int!
+  other_user_id: Int!
+  removed: Boolean
+  when_: String
+  mod_user_name: String!
+  other_user_name: String!
+}
+
+input LoginForm {
+  username_or_email: String!
+  password: String!
+}
+
+input RegisterForm {
+  username: String!
+  email: String
+  password: String!
+  password_verify: String!
+  admin: Boolean!
+  show_nsfw: Boolean!
+}
+
+type LoginResponse {
+  jwt: String!
+}
+
+input UserSettingsForm {
+  show_nsfw: Boolean!
+  theme: String!
+  default_sort_type: SortType!
+  default_listing_type: ListingType!
+  lang: String!
+  avatar: String
+  email: String
+  matrix_user_id: String
+  new_password: String
+  new_password_verify: String
+  old_password: String
+  show_avatars: Boolean!
+  send_notifications_to_email: Boolean!
+  auth: String!
+}
+
+input CommunityForm {
+  name: String!
+  title: String!
+  description: String
+  category_id: Int!
+  edit_id: Int
+  removed: Boolean
+  deleted: Boolean
+  nsfw: Boolean!
+  reason: String
+  expires: Int
+  auth: String
+}
+
+input GetCommunityForm {
+  id: Int
+  name: String
+  auth: String
+}
+
+type GetCommunityResponse {
+  community: Community!
+  moderators: [CommunityUser]!
+  admins: [UserView]!
+  online: Int!
+}
+
+type CommunityResponse {
+  community: Community!
+}
+
+input ListCommunitiesForm {
+  sort: String!
+  page: Int
+  limit: Int
+  auth: String
+}
+
+type ListCommunitiesResponse {
+  communities: [Community]!
+}
+
+type ListCategoriesResponse {
+  categories: [Category]!
+}
+
+input PostForm {
+  name: String!
+  url: String
+  body: String
+  community_id: Int!
+  updated: Int
+  edit_id: Int
+  creator_id: Int!
+  removed: Boolean
+  deleted: Boolean
+  nsfw: Boolean!
+  locked: Boolean
+  stickied: Boolean
+  reason: String
+  auth: String!
+}
+
+input PostFormParams {
+  name: String!
+  url: String
+  body: String
+  community: String
+}
+
+input GetPostForm {
+  id: Int!
+  auth: String
+}
+
+type GetPostResponse {
+  post: Post!
+  comments: [Comment]!
+  community: Community!
+  moderators: [CommunityUser]!
+  admins: [UserView]!
+  online: Int!
+}
+
+input SavePostForm {
+  post_id: Int!
+  save: Boolean!
+  auth: String
+}
+
+type PostResponse {
+  post: Post!
+}
+
+input CommentForm {
+  content: String!
+  post_id: Int!
+  parent_id: Int
+  edit_id: Int
+  creator_id: Int!
+  removed: Boolean
+  deleted: Boolean
+  reason: String
+  read: Boolean
+  auth: String!
+}
+
+input SaveCommentForm {
+  comment_id: Int!
+  save: Boolean!
+  auth: String
+}
+
+type CommentResponse {
+  comment: Comment!
+  recipient_ids: [number]!
+}
+
+input CommentLikeForm {
+  comment_id: Int!
+  post_id: Int!
+  score: Int!
+  auth: String
+}
+
+type CommentNode {
+  comment: Comment!
+  children: [CommentNode]
+}
+
+input GetPostsForm {
+  listing_type: String
+  sort: String!
+  page: Int
+  limit: Int
+  community_id: Int
+  auth: String
+}
+
+type GetPostsResponse {
+  posts: [Post]!
+}
+
+input GetCommentsForm {
+  listing_type: String
+  sort: String!
+  page: Int
+  limit: Int!
+  community_id: Int
+  auth: String
+}
+
+type GetCommentsResponse {
+  comments: [Comment]!
+}
+
+input CreatePostLikeForm {
+  post_id: Int!
+  score: Int!
+  auth: String
+}
+
+input CreatePostTaggedForm {
+  post_id: Int!
+  tags: [String]!
+  auth: String
+}
+
+input SiteForm {
+  name: String!
+  description: String
+  enable_downvotes: Boolean!
+  open_registration: Boolean!
+  enable_nsfw: Boolean!
+  auth: String
+}
+
+type GetSiteConfig {
+  auth: String
+}
+
+type GetSiteConfigResponse {
+  config_hjson: String!
+}
+
+input SiteConfigForm {
+  config_hjson: String!
+  auth: String
+}
+
+type GetSiteResponse {
+  site: Site!
+  admins: [UserView]!
+  banned: [UserView]!
+  online: Int!
+}
+
+type SiteResponse {
+  site: Site!
+}
+
+input BanUserForm {
+  user_id: Int!
+  ban: Boolean!
+  reason: String
+  expires: Int
+  auth: String
+}
+
+type BanUserResponse {
+  user: UserView!
+  banned: Boolean!
+}
+
+input AddAdminForm {
+  user_id: Int!
+  added: Boolean!
+  auth: String
+}
+
+type AddAdminResponse {
+  admins: [UserView]!
+}
+
+input SearchForm {
+  q: String!
+  search_type: String
+  community_id: Int
+  sort: String!
+  page: Int
+  limit: Int
+  auth: String
+}
+
+type SearchResponse {
+  search_type: String
+  posts: [Post]
+  comments: [Comment]
+  communities: [Community]!
+  users: [UserView]!
+}
+
+input DeleteAccountForm {
+  password: String!
+}
+
+input PasswordResetForm {
+  email: String!
+}
+
+input PasswordChangeForm {
+  token: String!
+  password: String!
+  password_verify: String!
+}
+
+input PrivateMessageForm {
+  content: String!
+  recipient_id: Int!
+  auth: String
+}
+
+input PrivateMessageFormParams {
+  recipient_id: Int!
+}
+
+input EditPrivateMessageForm {
+  edit_id: Int!
+  content: String
+  deleted: Boolean
+  read: Boolean
+  auth: String
+}
+
+input GetPrivateMessagesForm {
+  unread_only: Boolean!
+  page: Int
+  limit: Int
+  auth: String
+}
+
+type PrivateMessagesResponse {
+  messages: [PrivateMessage]!
+}
+
+type PrivateMessageResponse {
+  message: PrivateMessage!
+}
+
+input UserJoinForm {
+  auth: String!
+}
+
+type UserJoinResponse {
+  user_id: Int!
+}
+
+type WebSocketResponse {
+  op: UserOperation!
+  data: ResponseType!
+}
+
+type WebSocketJsonResponse {
+  op: String
+  data: ResponseType
+  error: String
+  reconnect: Boolean
+}

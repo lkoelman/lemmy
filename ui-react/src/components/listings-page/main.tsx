@@ -135,6 +135,7 @@ export class Main extends Component<any, MainState> {
         () => console.log('complete')
       );
 
+    // Request all required data from webscoket
     WebSocketService.Instance.getSite();
 
     if (UserService.Instance.user) {
@@ -148,7 +149,7 @@ export class Main extends Component<any, MainState> {
 
     WebSocketService.Instance.listCommunities(listCommunitiesForm);
 
-    this.fetchData();
+    this.requestContent();
   }
 
 
@@ -204,7 +205,7 @@ export class Main extends Component<any, MainState> {
         sort: getSortTypeFromProps(nextProps),
         page: getPageFromProps(nextProps),
       })
-      this.fetchData();
+      this.requestContent();
     }
   }
 
@@ -358,14 +359,14 @@ export class Main extends Component<any, MainState> {
   nextPage = () => {
     this.setState({ page:this.state.page+1, loading:true })
     this.updateUrl();
-    this.fetchData();
+    this.requestContent();
     window.scrollTo(0, 0);
   }
 
   prevPage = () => {
     this.setState({ page:this.state.page-1, loading:true })
     this.updateUrl();
-    this.fetchData();
+    this.requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -376,7 +377,7 @@ export class Main extends Component<any, MainState> {
       loading: true,
     });
     this.updateUrl();
-    this.fetchData();
+    this.requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -387,7 +388,7 @@ export class Main extends Component<any, MainState> {
       loading: true,
     });
     this.updateUrl();
-    this.fetchData();
+    this.requestContent();
     window.scrollTo(0, 0);
   }
 
@@ -398,11 +399,14 @@ export class Main extends Component<any, MainState> {
       loading: true,
     });
     this.updateUrl();
-    this.fetchData();
+    this.requestContent();
     window.scrollTo(0, 0);
   }
 
-  fetchData() {
+  /**
+   * Request posts and comments from data provider (websocket).
+   */
+  requestContent() {
     if (this.state.dataType == DataType.Post) {
       let getPostsForm: GetPostsForm = {
         page: this.state.page,
@@ -422,6 +426,9 @@ export class Main extends Component<any, MainState> {
     }
   }
 
+  /**
+   * Handle updates from data provider (websocket).
+   */
   parseMessage = (msg: WebSocketJsonResponse) => {
     console.log(msg);
     let res = wsJsonToRes(msg);
@@ -429,7 +436,7 @@ export class Main extends Component<any, MainState> {
       toast(i18n.t(msg.error), 'danger');
       return;
     } else if (msg.reconnect) {
-      this.fetchData();
+      this.requestContent();
 
     } else if (res.op == UserOperation.GetFollowedCommunities) {
       let data = res.data as GetFollowedCommunitiesResponse;

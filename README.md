@@ -33,23 +33,23 @@ Lemmy-react will offer the same features as Lemmy (which roughly mirror the feat
 - See <a href="https://github.com/LemmyNet/lemmy#features"> Lemmy features </a>
   - federation
 
-Indended features:
+### Feature Goals
 
-- composable curation & moderation policies
+- curation/ranking & moderation policies that are *fully composable*
   - pick and choose your content curation algorithms
+  - write your own curation rules/algorithm
 
-- custom submission & curation bots
-  - write your own curation algorithm or rules
+- custom submission bots
+  - write your own submission bot (~scraper)
+  - RSS integration
 
 - tag-based voting and link aggregation/curation
-
-- RSS integration
 
 - smart contract integration
   - reward community contributions
   - design complex community management systems (turn your community into a [DAO](https://en.wikipedia.org/wiki/Decentralized_autonomous_organization))
 
-### Built With
+## Built With
 
 - [Rust](https://www.rust-lang.org)
 - [Actix](https://actix.rs/)
