@@ -3,9 +3,9 @@ use crate::schema::private_message;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct PrivateMessage {
-  pub id: i32,
-  pub creator_id: i32,
-  pub recipient_id: i32,
+  pub id: i64,
+  pub creator_id: i64,
+  pub recipient_id: i64,
   pub content: String,
   pub deleted: bool,
   pub read: bool,
@@ -15,21 +15,21 @@ pub struct PrivateMessage {
 
 #[derive(Clone)]
 pub struct PrivateMessageForm {
-  pub creator_id: i32,
-  pub recipient_id: i32,
+  pub creator_id: i64,
+  pub recipient_id: i64,
   pub content: Option<String>,
   pub deleted: Option<bool>,
   pub read: Option<bool>,
   pub updated: Option<chrono::NaiveDateTime>,
 }
 
-impl Crud<PrivateMessageForm, dgraph::Client> for PrivateMessage {
-  fn read(conn: &dgraph::Client, private_message_id: i32) -> Result<Self> {
+impl CrudNode<PrivateMessageForm, dgraph::Client> for PrivateMessage {
+  fn read(conn: &dgraph::Client, private_message_id: i64) -> Result<Self> {
     use crate::schema::private_message::dsl::*;
     private_message.find(private_message_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, private_message_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, private_message_id: i64) -> Result<usize> {
     use crate::schema::private_message::dsl::*;
     diesel::delete(private_message.find(private_message_id)).execute(conn)
   }
@@ -43,7 +43,7 @@ impl Crud<PrivateMessageForm, dgraph::Client> for PrivateMessage {
 
   fn update(
     conn: &dgraph::Client,
-    private_message_id: i32,
+    private_message_id: i64,
     private_message_form: &PrivateMessageForm,
   ) -> Result<Self> {
     use crate::schema::private_message::dsl::*;

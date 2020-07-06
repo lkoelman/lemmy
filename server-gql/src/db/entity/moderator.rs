@@ -6,9 +6,9 @@ use crate::schema::{
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModRemovePost {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
   pub when_: chrono::NaiveDateTime,
@@ -16,19 +16,19 @@ pub struct ModRemovePost {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModRemovePostForm {
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
 }
 
-impl Crud<ModRemovePostForm, dgraph::Client> for ModRemovePost {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModRemovePostForm, dgraph::Client> for ModRemovePost {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_remove_post::dsl::*;
     mod_remove_post.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_remove_post::dsl::*;
     diesel::delete(mod_remove_post.find(from_id)).execute(conn)
   }
@@ -40,7 +40,7 @@ impl Crud<ModRemovePostForm, dgraph::Client> for ModRemovePost {
       .get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModRemovePostForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModRemovePostForm) -> Result<Self> {
     use crate::schema::mod_remove_post::dsl::*;
     diesel::update(mod_remove_post.find(from_id))
       .set(form)
@@ -50,27 +50,27 @@ impl Crud<ModRemovePostForm, dgraph::Client> for ModRemovePost {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModLockPost {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub locked: Option<bool>,
   pub when_: chrono::NaiveDateTime,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModLockPostForm {
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub locked: Option<bool>,
 }
 
-impl Crud<ModLockPostForm, dgraph::Client> for ModLockPost {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModLockPostForm, dgraph::Client> for ModLockPost {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_lock_post::dsl::*;
     mod_lock_post.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_lock_post::dsl::*;
     diesel::delete(mod_lock_post.find(from_id)).execute(conn)
   }
@@ -82,7 +82,7 @@ impl Crud<ModLockPostForm, dgraph::Client> for ModLockPost {
       .get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModLockPostForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModLockPostForm) -> Result<Self> {
     use crate::schema::mod_lock_post::dsl::*;
     diesel::update(mod_lock_post.find(from_id))
       .set(form)
@@ -92,27 +92,27 @@ impl Crud<ModLockPostForm, dgraph::Client> for ModLockPost {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModStickyPost {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub stickied: Option<bool>,
   pub when_: chrono::NaiveDateTime,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModStickyPostForm {
-  pub mod_user_id: i32,
-  pub post_id: i32,
+  pub mod_user_id: i64,
+  pub post_id: i64,
   pub stickied: Option<bool>,
 }
 
-impl Crud<ModStickyPostForm, dgraph::Client> for ModStickyPost {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModStickyPostForm, dgraph::Client> for ModStickyPost {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_sticky_post::dsl::*;
     mod_sticky_post.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_sticky_post::dsl::*;
     diesel::delete(mod_sticky_post.find(from_id)).execute(conn)
   }
@@ -124,7 +124,7 @@ impl Crud<ModStickyPostForm, dgraph::Client> for ModStickyPost {
       .get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModStickyPostForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModStickyPostForm) -> Result<Self> {
     use crate::schema::mod_sticky_post::dsl::*;
     diesel::update(mod_sticky_post.find(from_id))
       .set(form)
@@ -134,9 +134,9 @@ impl Crud<ModStickyPostForm, dgraph::Client> for ModStickyPost {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModRemoveComment {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub comment_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub comment_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
   pub when_: chrono::NaiveDateTime,
@@ -144,19 +144,19 @@ pub struct ModRemoveComment {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModRemoveCommentForm {
-  pub mod_user_id: i32,
-  pub comment_id: i32,
+  pub mod_user_id: i64,
+  pub comment_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
 }
 
-impl Crud<ModRemoveCommentForm, dgraph::Client> for ModRemoveComment {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModRemoveCommentForm, dgraph::Client> for ModRemoveComment {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_remove_comment::dsl::*;
     mod_remove_comment.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_remove_comment::dsl::*;
     diesel::delete(mod_remove_comment.find(from_id)).execute(conn)
   }
@@ -168,7 +168,7 @@ impl Crud<ModRemoveCommentForm, dgraph::Client> for ModRemoveComment {
       .get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModRemoveCommentForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModRemoveCommentForm) -> Result<Self> {
     use crate::schema::mod_remove_comment::dsl::*;
     diesel::update(mod_remove_comment.find(from_id))
       .set(form)
@@ -178,9 +178,9 @@ impl Crud<ModRemoveCommentForm, dgraph::Client> for ModRemoveComment {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModRemoveCommunity {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub community_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub community_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
@@ -189,20 +189,20 @@ pub struct ModRemoveCommunity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModRemoveCommunityForm {
-  pub mod_user_id: i32,
-  pub community_id: i32,
+  pub mod_user_id: i64,
+  pub community_id: i64,
   pub reason: Option<String>,
   pub removed: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
 }
 
-impl Crud<ModRemoveCommunityForm, dgraph::Client> for ModRemoveCommunity {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModRemoveCommunityForm, dgraph::Client> for ModRemoveCommunity {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_remove_community::dsl::*;
     mod_remove_community.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_remove_community::dsl::*;
     diesel::delete(mod_remove_community.find(from_id)).execute(conn)
   }
@@ -216,7 +216,7 @@ impl Crud<ModRemoveCommunityForm, dgraph::Client> for ModRemoveCommunity {
 
   fn update(
     conn: &dgraph::Client,
-    from_id: i32,
+    from_id: i64,
     form: &ModRemoveCommunityForm,
   ) -> Result<Self> {
     use crate::schema::mod_remove_community::dsl::*;
@@ -228,10 +228,10 @@ impl Crud<ModRemoveCommunityForm, dgraph::Client> for ModRemoveCommunity {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModBanFromCommunity {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
-  pub community_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
+  pub community_id: i64,
   pub reason: Option<String>,
   pub banned: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
@@ -240,21 +240,21 @@ pub struct ModBanFromCommunity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModBanFromCommunityForm {
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
-  pub community_id: i32,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
+  pub community_id: i64,
   pub reason: Option<String>,
   pub banned: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
 }
 
-impl Crud<ModBanFromCommunityForm, dgraph::Client> for ModBanFromCommunity {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModBanFromCommunityForm, dgraph::Client> for ModBanFromCommunity {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_ban_from_community::dsl::*;
     mod_ban_from_community.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_ban_from_community::dsl::*;
     diesel::delete(mod_ban_from_community.find(from_id)).execute(conn)
   }
@@ -268,7 +268,7 @@ impl Crud<ModBanFromCommunityForm, dgraph::Client> for ModBanFromCommunity {
 
   fn update(
     conn: &dgraph::Client,
-    from_id: i32,
+    from_id: i64,
     form: &ModBanFromCommunityForm,
   ) -> Result<Self> {
     use crate::schema::mod_ban_from_community::dsl::*;
@@ -280,9 +280,9 @@ impl Crud<ModBanFromCommunityForm, dgraph::Client> for ModBanFromCommunity {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModBan {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
   pub reason: Option<String>,
   pub banned: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
@@ -291,20 +291,20 @@ pub struct ModBan {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModBanForm {
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
   pub reason: Option<String>,
   pub banned: Option<bool>,
   pub expires: Option<chrono::NaiveDateTime>,
 }
 
-impl Crud<ModBanForm, dgraph::Client> for ModBan {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModBanForm, dgraph::Client> for ModBan {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_ban::dsl::*;
     mod_ban.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_ban::dsl::*;
     diesel::delete(mod_ban.find(from_id)).execute(conn)
   }
@@ -314,7 +314,7 @@ impl Crud<ModBanForm, dgraph::Client> for ModBan {
     insert_into(mod_ban).values(form).get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModBanForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModBanForm) -> Result<Self> {
     use crate::schema::mod_ban::dsl::*;
     diesel::update(mod_ban.find(from_id))
       .set(form)
@@ -324,29 +324,29 @@ impl Crud<ModBanForm, dgraph::Client> for ModBan {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModAddCommunity {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
-  pub community_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
+  pub community_id: i64,
   pub removed: Option<bool>,
   pub when_: chrono::NaiveDateTime,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModAddCommunityForm {
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
-  pub community_id: i32,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
+  pub community_id: i64,
   pub removed: Option<bool>,
 }
 
-impl Crud<ModAddCommunityForm, dgraph::Client> for ModAddCommunity {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModAddCommunityForm, dgraph::Client> for ModAddCommunity {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_add_community::dsl::*;
     mod_add_community.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_add_community::dsl::*;
     diesel::delete(mod_add_community.find(from_id)).execute(conn)
   }
@@ -358,7 +358,7 @@ impl Crud<ModAddCommunityForm, dgraph::Client> for ModAddCommunity {
       .get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModAddCommunityForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModAddCommunityForm) -> Result<Self> {
     use crate::schema::mod_add_community::dsl::*;
     diesel::update(mod_add_community.find(from_id))
       .set(form)
@@ -368,27 +368,27 @@ impl Crud<ModAddCommunityForm, dgraph::Client> for ModAddCommunity {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModAdd {
-  pub id: i32,
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
+  pub id: i64,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
   pub removed: Option<bool>,
   pub when_: chrono::NaiveDateTime,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ModAddForm {
-  pub mod_user_id: i32,
-  pub other_user_id: i32,
+  pub mod_user_id: i64,
+  pub other_user_id: i64,
   pub removed: Option<bool>,
 }
 
-impl Crud<ModAddForm, dgraph::Client> for ModAdd {
-  fn read(conn: &dgraph::Client, from_id: i32) -> Result<Self> {
+impl CrudNode<ModAddForm, dgraph::Client> for ModAdd {
+  fn read(conn: &dgraph::Client, from_id: i64) -> Result<Self> {
     use crate::schema::mod_add::dsl::*;
     mod_add.find(from_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, from_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, from_id: i64) -> Result<usize> {
     use crate::schema::mod_add::dsl::*;
     diesel::delete(mod_add.find(from_id)).execute(conn)
   }
@@ -398,7 +398,7 @@ impl Crud<ModAddForm, dgraph::Client> for ModAdd {
     insert_into(mod_add).values(form).get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, from_id: i32, form: &ModAddForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, from_id: i64, form: &ModAddForm) -> Result<Self> {
     use crate::schema::mod_add::dsl::*;
     diesel::update(mod_add.find(from_id))
       .set(form)

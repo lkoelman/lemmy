@@ -1,13 +1,16 @@
-use super::*;
+use crate::db::*;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Community {
-  pub id: i32,
+  #[serde(deserialize_with = "deserialize_number_from_string")]
+  #[serde(rename(deserialize = "uid"))]
+  pub id: i64,
   pub name: String,
   pub title: String,
   pub description: Option<String>,
-  pub category_id: i32,
-  pub creator_id: i32,
+  pub category_id: i64,
+  pub creator_id: i64,
   pub removed: bool,
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
@@ -16,18 +19,23 @@ pub struct Community {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommunityForm {
   pub name: String,
   pub title: String,
   pub description: Option<String>,
-  pub category_id: i32,
-  pub creator_id: i32,
+  pub category_id: i64,
+  pub creator_id: i64,
   pub removed: Option<bool>,
   pub updated: Option<chrono::NaiveDateTime>,
   pub deleted: Option<bool>,
   pub nsfw: bool,
 }
 
+
+impl CommunityForm {
+  const GDB_TYPE: &'static str = "Community";
+}
 
 impl Community {
 
@@ -59,7 +67,7 @@ impl Community {
 
 
 #[async_trait]
-impl Crud<CommunityForm> for Community {
+impl CrudNode<CommunityForm> for Community {
  fn db_type_name(&self) -> &'static str {
    Community::GDB_TYPE
  }
@@ -67,58 +75,98 @@ impl Crud<CommunityForm> for Community {
 
 //#############################################################################
 
-#[derive(PartialEq, Debug)]
+// NOTE: types implemented as edges
+//  - have no UID (id)
+//  - do not serialize the 'to' and 'from' fields of the form
+
+/// Core type also used as DB form
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommunityModerator {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
+  #[serde(skip)]
+  pub community_id: i64,
+  #[serde(skip)]
+  pub user_id: i64,
   pub published: chrono::NaiveDateTime,
 }
 
-#[derive(Clone)]
+/// Form for internal use
+#[derive(Clone, Debug)]
 pub struct CommunityModeratorForm {
-  pub community_id: i32,
-  pub user_id: i32,
+  pub community_id: i64,
+  pub user_id: i64,
+}
+
+impl Edge<CommunityModeratorForm> for CommunityModerator {
+  fn from(&self) -> i64 {
+      self.community_id
+  }
+  fn to(&self) -> i64 {
+      self.user_id
+  }
+  fn from_form(form: &CommunityModeratorForm) -> Result<Self, Error> {
+      Ok(CommunityModerator {
+        community_id: form.community_id,
+        user_id: form.user_id,
+        published: chrono::Utc::now(),
+      })
+  }
+  fn db_type_name() -> &'static str {
+    "Community.Moderator"
+  }
 }
 
 impl CommunityModerator {
-  pub fn delete_for_community(conn: &dgraph::Client, for_community_id: i32) -> Result<usize> {
 
-    let mut txn = conn.new_mutated_txn();
-    let mut mu = Mutation::new();
-    mu.set_delete_nquads(format!(r#"uid({}) * * ."#,
-                                 for_community_id))
-
-    let resp = txn.mutate(mu).await?;
-    txn.commit().await? // .expect("Transaction is commited");
-
-    Ok(resp.uids.len())
+  /**
+   * Delete all moderators for community.
+   */
+  pub fn delete_for_community(conn: &dgraph::Client, for_community_id: i64) -> Result<usize> {
+    // Edge is <Community> <moderated> <User>
+    delete_edges(conn, Some(for_community_id), None, Self::db_type_name())
   }
 }
 
+impl CrudEdge<CommunityModeratorForm> for CommunityModerator {}
+
 impl Joinable<CommunityModeratorForm> for CommunityModerator {
 
+  /**
+   * Add moderator for community
+   */
   fn join(
     conn: &dgraph::Client,
-    community_user_form: &CommunityModeratorForm,
+    form: &CommunityModeratorForm,
   ) -> Result<Self> {
-    use crate::schema::community_moderator::dsl::*;
-    insert_into(community_moderator)
-      .values(community_user_form)
-      .get_result::<Self>(conn)
+
+    let datetime: chrono::NaiveDateTime = chrono::Utc::now();
+
+    let moderated = CommunityModerator {
+      community_id: form.community_id,
+      user_id: form.user_id,
+      published: datetime,
+    };
+
+    let num_edges = create_edge::<CommunityModerator>(conn, moderated);
+
+    match num_edges {
+      Ok(i) => Ok(moderated),
+      Err(e) => e
+    }
   }
 
+  /**
+   * Delete moderator for community
+   */
   fn leave(
     conn: &dgraph::Client,
-    community_user_form: &CommunityModeratorForm,
+    form: &CommunityModeratorForm,
   ) -> Result<usize> {
-    use crate::schema::community_moderator::dsl::*;
-    diesel::delete(
-      community_moderator
-        .filter(community_id.eq(community_user_form.community_id))
-        .filter(user_id.eq(community_user_form.user_id)),
-    )
-    .execute(conn)
+    // Edge is <Community> <moderated> <User>
+    delete_edges(conn,
+      Some(form.from()),
+      Some(form.to()),
+      Self::db_type_name())
   }
 
 }
@@ -126,83 +174,160 @@ impl Joinable<CommunityModeratorForm> for CommunityModerator {
 
 //#############################################################################
 
-#[derive(PartialEq, Debug)]
-#[belongs_to(Community)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommunityUserBan {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
+  #[serde(skip)]
+  pub community_id: i64,
+  #[serde(skip)]
+  pub user_id: i64,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct CommunityUserBanForm {
-  pub community_id: i32,
-  pub user_id: i32,
+  pub community_id: i64,
+  pub user_id: i64,
+}
+
+impl Edge<CommunityUserBanForm> for CommunityUserBan {
+  fn from(&self) -> i64 {
+      self.community_id
+  }
+  fn to(&self) -> i64 {
+      self.user_id
+  }
+  fn from_form(form: &CommunityUserBanForm) -> Result<Self, Error> {
+    Ok(CommunityUserBan {
+      community_id: form.community_id,
+      user_id: form.user_id,
+      published: chrono::Utc::now(),
+    })
+  }
+  fn db_type_name() -> &'static str {
+    "Community.BanUser"
+  }
 }
 
 impl Bannable<CommunityUserBanForm> for CommunityUserBan {
+
+  /**
+   * Ban user from community
+   */
   fn ban(
     conn: &dgraph::Client,
-    community_user_ban_form: &CommunityUserBanForm,
+    form: &CommunityUserBanForm,
   ) -> Result<Self> {
-    use crate::schema::community_user_ban::dsl::*;
-    insert_into(community_user_ban)
-      .values(community_user_ban_form)
-      .get_result::<Self>(conn)
+
+    let datetime: chrono::NaiveDateTime = chrono::Utc::now();
+
+    let ban = CommunityUserBan {
+      community_id: form.community_id,
+      user_id: form.user_id,
+      published: datetime,
+    };
+
+    let num_edges = create_edge::<CommunityUserBan>(conn, ban);
+
+    match num_edges {
+      Ok(i) => Ok(ban),
+      Err(e) => e
+    }
   }
 
+  /**
+   * Unban user from community
+   */
   fn unban(
     conn: &dgraph::Client,
-    community_user_ban_form: &CommunityUserBanForm,
+    form: &CommunityUserBanForm,
   ) -> Result<usize> {
-    use crate::schema::community_user_ban::dsl::*;
-    diesel::delete(
-      community_user_ban
-        .filter(community_id.eq(community_user_ban_form.community_id))
-        .filter(user_id.eq(community_user_ban_form.user_id)),
-    )
-    .execute(conn)
+
+    // Edge is <Community> <Ban> <User>
+    delete_edges(conn,
+      Some(form.from()),
+      Some(form.to()),
+      Self::db_type_name())
   }
 }
 
 //#############################################################################
 
-#[derive(PartialEq, Debug)]
-#[belongs_to(Community)]
+/// Core type also used as DB form
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommunityFollower {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
+  #[serde(skip)]
+  pub community_id: i64,
+  #[serde(skip)]
+  pub user_id: i64,
   pub published: chrono::NaiveDateTime,
 }
 
+/// Form for internal use
 #[derive(Clone)]
 pub struct CommunityFollowerForm {
-  pub community_id: i32,
-  pub user_id: i32,
+  pub community_id: i64,
+  pub user_id: i64,
+}
+
+impl Edge<CommunityFollowerForm> for CommunityFollower {
+  fn from(&self) -> i64 {
+      self.community_id
+  }
+  fn to(&self) -> i64 {
+      self.user_id
+  }
+  fn from_form(form: &CommunityFollowerForm) -> Result<Self, Error> {
+      Ok(CommunityFollower {
+        community_id: form.community_id,
+        user_id: form.user_id,
+        published: chrono::Utc::now(),
+      })
+  }
+  fn db_type_name() -> &'static str {
+    "Follower"
+  }
 }
 
 impl Followable<CommunityFollowerForm> for CommunityFollower {
+
+  /**
+   * Add user as follower for community.
+   */
   fn follow(
     conn: &dgraph::Client,
-    community_follower_form: &CommunityFollowerForm,
+    form: &CommunityFollowerForm,
   ) -> Result<Self> {
-    use crate::schema::community_follower::dsl::*;
-    insert_into(community_follower)
-      .values(community_follower_form)
-      .get_result::<Self>(conn)
+
+    let datetime: chrono::NaiveDateTime = chrono::Utc::now();
+
+    let follower = CommunityFollower {
+      community_id: form.community_id,
+      user_id: form.user_id,
+      published: datetime,
+    };
+
+    let num_edges = create_edge::<CommunityFollower>(conn, follower);
+
+    match num_edges {
+      Ok(i) => Ok(follower),
+      Err(e) => e
+    }
   }
+
+  /**
+   * Remove user as follower for community
+   */
   fn ignore(
     conn: &dgraph::Client,
-    community_follower_form: &CommunityFollowerForm,
+    form: &CommunityFollowerForm,
   ) -> Result<usize> {
-    use crate::schema::community_follower::dsl::*;
-    diesel::delete(
-      community_follower
-        .filter(community_id.eq(&community_follower_form.community_id))
-        .filter(user_id.eq(&community_follower_form.user_id)),
-    )
-    .execute(conn)
+
+    // Edge is <Community> <Follower> <User>
+    delete_edges(conn,
+      Some(form.from()),
+      Some(form.to()),
+      Self::db_type_name())
   }
 }

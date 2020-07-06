@@ -5,26 +5,26 @@ use sha2::{Digest, Sha256};
 
 #[derive(PartialEq, Debug)]
 pub struct PasswordResetRequest {
-  pub id: i32,
-  pub user_id: i32,
+  pub id: i64,
+  pub user_id: i64,
   pub token_encrypted: String,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct PasswordResetRequestForm {
-  pub user_id: i32,
+  pub user_id: i64,
   pub token_encrypted: String,
 }
 
-impl Crud<PasswordResetRequestForm, dgraph::Client> for PasswordResetRequest {
-  fn read(conn: &dgraph::Client, password_reset_request_id: i32) -> Result<Self> {
+impl CrudNode<PasswordResetRequestForm, dgraph::Client> for PasswordResetRequest {
+  fn read(conn: &dgraph::Client, password_reset_request_id: i64) -> Result<Self> {
     use crate::schema::password_reset_request::dsl::*;
     password_reset_request
       .find(password_reset_request_id)
       .first::<Self>(conn)
   }
-  fn delete(conn: &dgraph::Client, password_reset_request_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, password_reset_request_id: i64) -> Result<usize> {
     diesel::delete(password_reset_request.find(password_reset_request_id)).execute(conn)
   }
   fn create(conn: &dgraph::Client, form: &PasswordResetRequestForm) -> Result<Self> {
@@ -34,7 +34,7 @@ impl Crud<PasswordResetRequestForm, dgraph::Client> for PasswordResetRequest {
   }
   fn update(
     conn: &dgraph::Client,
-    password_reset_request_id: i32,
+    password_reset_request_id: i64,
     form: &PasswordResetRequestForm,
   ) -> Result<Self> {
     diesel::update(password_reset_request.find(password_reset_request_id))
@@ -44,7 +44,7 @@ impl Crud<PasswordResetRequestForm, dgraph::Client> for PasswordResetRequest {
 }
 
 impl PasswordResetRequest {
-  pub fn create_token(conn: &dgraph::Client, from_user_id: i32, token: &str) -> Result<Self> {
+  pub fn create_token(conn: &dgraph::Client, from_user_id: i64, token: &str) -> Result<Self> {
     let mut hasher = Sha256::new();
     hasher.input(token);
     let token_hash: String = PasswordResetRequest::bytes_to_hex(hasher.result().to_vec());

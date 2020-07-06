@@ -30,8 +30,6 @@ lazy_static! {
   static ref CACHE_CONTROL_VALUE: String = format!("public, max-age={}", 60 * 60);
 }
 
-embed_migrations!();
-
 
 #[actix_rt::main]
 async fn main() -> io::Result<()> {

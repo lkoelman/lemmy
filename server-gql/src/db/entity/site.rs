@@ -2,10 +2,10 @@ use super::*;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Site {
-  pub id: i32,
+  pub id: i64,
   pub name: String,
   pub description: Option<String>,
-  pub creator_id: i32,
+  pub creator_id: i64,
   pub published: chrono::NaiveDateTime,
   pub updated: Option<chrono::NaiveDateTime>,
   pub enable_downvotes: bool,
@@ -17,7 +17,7 @@ pub struct Site {
 pub struct SiteForm {
   pub name: String,
   pub description: Option<String>,
-  pub creator_id: i32,
+  pub creator_id: i64,
   pub updated: Option<chrono::NaiveDateTime>,
   pub enable_downvotes: bool,
   pub open_registration: bool,
@@ -28,7 +28,7 @@ pub struct SiteForm {
  * CRUD operations for sites
  */
 #[async_trait]
-impl Crud<SiteForm> for Site {  
+impl CrudNode<SiteForm> for Site {  
   fn db_type_name(&self) -> &'static str {
     "Site"
   }

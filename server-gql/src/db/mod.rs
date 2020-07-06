@@ -2,12 +2,20 @@
  * Module containing generic traits for all DB types.
  */
 use crate::settings::Settings;
-use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
+use failure::Error;
+use serde::{
+  Deserialize, Serialize, Serializer, //, Deserializer,
+  de::DeserializeOwned, ser::SerializeStruct
+};
+use serde_aux::prelude::deserialize_number_from_string;
 use dgraph_tonic as dgraph;
-use dgraph_tonic::{Query, Mutation}; // ,DgraphError as Error
+use dgraph_tonic::{Client, Query, Mutation, Mutate};
 
-// re-export common functionality
+pub mod common;
+pub use common::traits::*;
+pub use common::dgraph_utils::*;
+
 // FIXME: possibly replace by: mod entity; pub use entity::category;
 #[path = "entity/category.rs"]
 pub mod category;
@@ -31,7 +39,7 @@ pub mod user;
 pub mod user_mention;
 
 // Propagate any error
-type Result<T> = std::result::Result<T, failure::Error>;
+// type Result<T> = std::result::Result<T, failure::Error>;
 
 
 pub trait MaybeOptional<T> {

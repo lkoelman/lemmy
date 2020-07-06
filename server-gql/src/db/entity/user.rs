@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, 
 
 #[derive(PartialEq, Debug)]
 pub struct User_ {
-  pub id: i32,
+  pub id: i64,
   pub name: String,
   pub fedi_name: String,
   pub preferred_username: Option<String>,
@@ -49,17 +49,17 @@ pub struct UserForm {
   pub matrix_user_id: Option<String>,
 }
 
-impl Crud<UserForm, dgraph::Client> for User_ {
-  fn read(conn: &dgraph::Client, user_id: i32) -> Result<Self> {
+impl CrudNode<UserForm, dgraph::Client> for User_ {
+  fn read(conn: &dgraph::Client, user_id: i64) -> Result<Self> {
     user_.find(user_id).first::<Self>(conn)
   }
-  fn delete(conn: &dgraph::Client, user_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, user_id: i64) -> Result<usize> {
     diesel::delete(user_.find(user_id)).execute(conn)
   }
   fn create(conn: &dgraph::Client, form: &UserForm) -> Result<Self> {
     insert_into(user_).values(form).get_result::<Self>(conn)
   }
-  fn update(conn: &dgraph::Client, user_id: i32, form: &UserForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, user_id: i64, form: &UserForm) -> Result<Self> {
     diesel::update(user_.find(user_id))
       .set(form)
       .get_result::<Self>(conn)
@@ -78,7 +78,7 @@ impl User_ {
 
   pub fn update_password(
     conn: &dgraph::Client,
-    user_id: i32,
+    user_id: i64,
     new_password: &str,
   ) -> Result<Self> {
     let password_hash = hash(new_password, DEFAULT_COST).expect("Couldn't hash password");
@@ -95,7 +95,7 @@ impl User_ {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-  pub id: i32,
+  pub id: i64,
   pub username: String,
   pub iss: String,
   pub show_nsfw: bool,

@@ -1,5 +1,6 @@
 {
     "editor.tokenColorCustomizations": {
         "semanticHighlighting": true
-    }
+    },
+    "rust-analyzer.inlayHints.enable": false
 }

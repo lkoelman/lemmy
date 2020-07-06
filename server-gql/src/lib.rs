@@ -18,6 +18,7 @@ pub extern crate lettre_email;
 pub extern crate rand;
 pub extern crate regex;
 pub extern crate rss;
+#[macro_use]
 pub extern crate serde;
 pub extern crate serde_json;
 pub extern crate sha2;

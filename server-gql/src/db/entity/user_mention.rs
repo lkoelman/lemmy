@@ -5,27 +5,27 @@ use crate::schema::user_mention;
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 #[belongs_to(Comment)]
 pub struct UserMention {
-  pub id: i32,
-  pub recipient_id: i32,
-  pub comment_id: i32,
+  pub id: i64,
+  pub recipient_id: i64,
+  pub comment_id: i64,
   pub read: bool,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct UserMentionForm {
-  pub recipient_id: i32,
-  pub comment_id: i32,
+  pub recipient_id: i64,
+  pub comment_id: i64,
   pub read: Option<bool>,
 }
 
-impl Crud<UserMentionForm, dgraph::Client> for UserMention {
-  fn read(conn: &dgraph::Client, user_mention_id: i32) -> Result<Self> {
+impl CrudNode<UserMentionForm, dgraph::Client> for UserMention {
+  fn read(conn: &dgraph::Client, user_mention_id: i64) -> Result<Self> {
     use crate::schema::user_mention::dsl::*;
     user_mention.find(user_mention_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, user_mention_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, user_mention_id: i64) -> Result<usize> {
     use crate::schema::user_mention::dsl::*;
     diesel::delete(user_mention.find(user_mention_id)).execute(conn)
   }
@@ -39,7 +39,7 @@ impl Crud<UserMentionForm, dgraph::Client> for UserMention {
 
   fn update(
     conn: &dgraph::Client,
-    user_mention_id: i32,
+    user_mention_id: i64,
     user_mention_form: &UserMentionForm,
   ) -> Result<Self> {
     use crate::schema::user_mention::dsl::*;

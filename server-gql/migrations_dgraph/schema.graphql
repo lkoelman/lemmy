@@ -41,14 +41,16 @@ type User {
     lang: String!
     showAvatars: Boolean!
     sendNotificationsToEmail: Boolean!
-    matrixUserId: String,
+    matrixUserId: String
+    # Edges (non-scalar predicates)
+    savedComments: [Comment] @dgraph(pred: "User.SavedComment")
 }
 
 type Post {
     id: ID!
     name: String!
-    url: String,
-    body: String,
+    url: String
+    body: String
     creator: User!
     community: Community!
     removed: Boolean!
@@ -58,10 +60,10 @@ type Post {
     deleted: Boolean!
     nsfw: Boolean!
     stickied: Boolean!
-    embedTitle: String,
-    embedDescription: String,
-    embedHtml: String,
-    thumbnailUrl: String,
+    embedTitle: String
+    embedDescription: String
+    embedHtml: String
+    thumbnailUrl: String
 }
 
 
@@ -76,6 +78,8 @@ type Comment {
     published: DateTime!
     updated: DateTime
     deleted: Boolean!
+    # Edges (non-scalar predicated)
+    liked: [User] @dgraph(pred: "Comment.UserLike")
 }
 
 type PrivateMessage {
@@ -114,6 +118,10 @@ type Community {
     updated: DateTime
     deleted: Boolean!
     nsfw: Boolean!
+    # Edges (non-scalar predicated)
+    moderators: [User] @dgraph(pred: "Community.Moderator")
+    bannedUsers: [User] @dgraph(pred: "Community.BanUser")
+    followers: [User] @dgraph(pred: "Community.Follower")
 }
 
 ###############################################################################
@@ -122,46 +130,47 @@ type Community {
 
 # TODO: represent some types as edges instead of nodes (with fields as facets)
 
-type CommentLike {
-    id: ID!
-    user: User!
-    comment: Comment
-    post: Post!
-    score: Int!
-    published: DateTime!
-}
+
+# type CommentLike {
+#     id: ID!
+#     user: User!
+#     comment: Comment
+#     post: Post!
+#     score: Int!
+#     published: DateTime!
+# }
 
 
-type CommentSaved {
-    id: ID!
-    comment: Comment
-    user: User!
-    published: DateTime!
-}
+# type CommentSaved {
+#     id: ID!
+#     comment: Comment
+#     user: User!
+#     published: DateTime!
+# }
 
 
-type CommunityFollower {
-    id: ID!
-    community: Community!
-    user: User!
-    published: DateTime!
-}
+# type CommunityFollower {
+#     id: ID!
+#     community: Community!
+#     user: User!
+#     published: DateTime!
+# }
 
 
-type CommunityModerator {
-    id: ID!
-    community: Community!
-    user: User!
-    published: DateTime!
-}
+# type CommunityModerator {
+#     id: ID!
+#     community: Community!
+#     user: User!
+#     published: DateTime!
+# }
 
 
-type CommunityUserBan {
-    id: ID!
-    community: Community!
-    user: User!
-    published: DateTime!
-}
+# type CommunityUserBan {
+#     id: ID!
+#     community: Community!
+#     user: User!
+#     published: DateTime!
+# }
 
 
 type ModAdd {

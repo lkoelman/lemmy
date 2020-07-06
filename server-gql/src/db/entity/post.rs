@@ -3,12 +3,12 @@ use crate::schema::{post, post_like, post_read, post_saved};
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Post {
-  pub id: i32,
+  pub id: i64,
   pub name: String,
   pub url: Option<String>,
   pub body: Option<String>,
-  pub creator_id: i32,
-  pub community_id: i32,
+  pub creator_id: i64,
+  pub community_id: i64,
   pub removed: bool,
   pub locked: bool,
   pub published: chrono::NaiveDateTime,
@@ -27,8 +27,8 @@ pub struct PostForm {
   pub name: String,
   pub url: Option<String>,
   pub body: Option<String>,
-  pub creator_id: i32,
-  pub community_id: i32,
+  pub creator_id: i64,
+  pub community_id: i64,
   pub removed: Option<bool>,
   pub locked: Option<bool>,
   pub updated: Option<chrono::NaiveDateTime>,
@@ -41,13 +41,13 @@ pub struct PostForm {
   pub thumbnail_url: Option<String>,
 }
 
-impl Crud<PostForm, dgraph::Client> for Post {
-  fn read(conn: &dgraph::Client, post_id: i32) -> Result<Self> {
+impl CrudNode<PostForm, dgraph::Client> for Post {
+  fn read(conn: &dgraph::Client, post_id: i64) -> Result<Self> {
     use crate::schema::post::dsl::*;
     post.find(post_id).first::<Self>(conn)
   }
 
-  fn delete(conn: &dgraph::Client, post_id: i32) -> Result<usize> {
+  fn delete(conn: &dgraph::Client, post_id: i64) -> Result<usize> {
     use crate::schema::post::dsl::*;
     diesel::delete(post.find(post_id)).execute(conn)
   }
@@ -57,7 +57,7 @@ impl Crud<PostForm, dgraph::Client> for Post {
     insert_into(post).values(new_post).get_result::<Self>(conn)
   }
 
-  fn update(conn: &dgraph::Client, post_id: i32, new_post: &PostForm) -> Result<Self> {
+  fn update(conn: &dgraph::Client, post_id: i64, new_post: &PostForm) -> Result<Self> {
     use crate::schema::post::dsl::*;
     diesel::update(post.find(post_id))
       .set(new_post)
@@ -68,17 +68,17 @@ impl Crud<PostForm, dgraph::Client> for Post {
 #[derive(PartialEq, Debug)]
 #[belongs_to(Post)]
 pub struct PostLike {
-  pub id: i32,
-  pub post_id: i32,
-  pub user_id: i32,
+  pub id: i64,
+  pub post_id: i64,
+  pub user_id: i64,
   pub score: i16,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct PostLikeForm {
-  pub post_id: i32,
-  pub user_id: i32,
+  pub post_id: i64,
+  pub user_id: i64,
   pub score: i16,
 }
 
@@ -109,16 +109,16 @@ impl Likeable<PostLikeForm> for PostLike {
 #[derive(PartialEq, Debug)]
 #[belongs_to(Post)]
 pub struct PostSaved {
-  pub id: i32,
-  pub post_id: i32,
-  pub user_id: i32,
+  pub id: i64,
+  pub post_id: i64,
+  pub user_id: i64,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct PostSavedForm {
-  pub post_id: i32,
-  pub user_id: i32,
+  pub post_id: i64,
+  pub user_id: i64,
 }
 
 impl Saveable<PostSavedForm> for PostSaved {
@@ -142,16 +142,16 @@ impl Saveable<PostSavedForm> for PostSaved {
 #[derive(PartialEq, Debug)]
 #[belongs_to(Post)]
 pub struct PostRead {
-  pub id: i32,
-  pub post_id: i32,
-  pub user_id: i32,
+  pub id: i64,
+  pub post_id: i64,
+  pub user_id: i64,
   pub published: chrono::NaiveDateTime,
 }
 
 #[derive(Clone)]
 pub struct PostReadForm {
-  pub post_id: i32,
-  pub user_id: i32,
+  pub post_id: i64,
+  pub user_id: i64,
 }
 
 impl Readable<PostReadForm> for PostRead {
