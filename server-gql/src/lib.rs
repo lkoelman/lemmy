@@ -1,7 +1,5 @@
 #![recursion_limit = "512"]
 #[macro_use]
-pub extern crate strum_macros;
-#[macro_use]
 pub extern crate lazy_static;
 #[macro_use]
 pub extern crate failure;
@@ -24,7 +22,11 @@ pub extern crate serde_json;
 pub extern crate sha2;
 pub extern crate strum;
 #[macro_use]
+pub extern crate strum_macros;
+#[macro_use]
 pub extern crate juniper;
+#[macro_use]
+pub extern crate getset;
 
 // TODO: export new modules in lib.rs
 pub mod api;

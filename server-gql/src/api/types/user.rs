@@ -1,7 +1,8 @@
 use serde::{Serialize, Deserialize};
-use super::community::{CommunityFollowerView, CommunityModeratorView};
-use super::post::{PostView};
-use super::comment::{ReplyView, CommentView};
+use crate::db::{
+  user_view::*, community_view::*,
+  post_view::*, comment_view::*,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Login {
@@ -200,68 +201,4 @@ pub struct UserJoin {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserJoinResponse {
   pub user_id: i32,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct UserView {
-  pub id: i32,
-  pub name: String,
-  pub avatar: Option<String>,
-  pub email: Option<String>,
-  pub matrix_user_id: Option<String>,
-  pub fedi_name: String,
-  pub admin: bool,
-  pub banned: bool,
-  pub show_avatars: bool,
-  pub send_notifications_to_email: bool,
-  pub published: chrono::NaiveDateTime,
-  pub number_of_posts: i64,
-  pub post_score: i64,
-  pub number_of_comments: i64,
-  pub comment_score: i64,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct UserMentionView {
-  pub id: i32,
-  pub user_mention_id: i32,
-  pub creator_id: i32,
-  pub post_id: i32,
-  pub parent_id: Option<i32>,
-  pub content: String,
-  pub removed: bool,
-  pub read: bool,
-  pub published: chrono::NaiveDateTime,
-  pub updated: Option<chrono::NaiveDateTime>,
-  pub deleted: bool,
-  pub community_id: i32,
-  pub community_name: String,
-  pub banned: bool,
-  pub banned_from_community: bool,
-  pub creator_name: String,
-  pub creator_avatar: Option<String>,
-  pub score: i64,
-  pub upvotes: i64,
-  pub downvotes: i64,
-  pub hot_rank: i32,
-  pub user_id: Option<i32>,
-  pub my_vote: Option<i32>,
-  pub saved: Option<bool>,
-  pub recipient_id: i32,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct PrivateMessageView {
-  pub id: i32,
-  pub creator_id: i32,
-  pub recipient_id: i32,
-  pub content: String,
-  pub deleted: bool,
-  pub read: bool,
-  pub published: chrono::NaiveDateTime,
-  pub updated: Option<chrono::NaiveDateTime>,
-  pub creator_name: String,
-  pub creator_avatar: Option<String>,
-  pub recipient_name: String,
-  pub recipient_avatar: Option<String>,
 }

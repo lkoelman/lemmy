@@ -4,9 +4,17 @@ version = "0.0.1"
 authors = ["Dessalines <tyhou13@gmx.com>"]
 edition = "2018"
 
+[[bin]]
+name = "lemmy_server"
+path = "src/main.rs"
+
+[lib]
+name = "lemmy_server"
+path = "src/lib.rs"
+
 [dependencies]
-diesel = { version = "1.4.2", features = ["postgres","chrono", "r2d2", "64-column-tables"] }
-diesel_migrations = "1.4.0"
+# diesel = { version = "1.4.2", features = ["postgres","chrono", "r2d2", "64-column-tables"] }
+# diesel_migrations = "1.4.0"
 dotenv = "0.15.0"
 bcrypt = "0.7.0"
 activitypub = "0.2.0"
@@ -46,3 +54,4 @@ juniper_actix = { git = "https://github.com/graphql-rust/juniper", branch = "mas
 # juniper-from-schema = "0.5.2"
 dgraph-tonic = "0.6"
 async-trait = "0.1"
+getset = "0.1"

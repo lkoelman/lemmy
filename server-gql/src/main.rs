@@ -1,8 +1,6 @@
 // extern crate lemmy_server;
-#[macro_use]
-extern crate diesel_migrations;
-#[macro_use]
-pub extern crate lazy_static;
+// #[macro_use]
+// extern crate lazy_static;
 
 use actix_web::dev::Service;
 use actix::prelude::*;
@@ -18,6 +16,7 @@ use lemmy_server::{
   settings::Settings,
   // websocket::server::*,
 };
+
 use regex::Regex;
 use std::{io, sync::Arc};
 use tokio::sync::Mutex;
@@ -35,18 +34,6 @@ lazy_static! {
 async fn main() -> io::Result<()> {
   env_logger::init();
   let settings = Settings::get();
-
-  // DEPRECATED: pSQL DB connection
-  // // Set up the r2d2 connection pool
-  // let manager = ConnectionManager::<PgConnection>::new(&settings.get_database_url());
-  // let pool = Pool::builder()
-  //   .max_size(settings.database.pool_size)
-  //   .build(manager)
-  //   .unwrap_or_else(|_| panic!("Error connecting to {}", settings.get_database_url()));
-
-  // // Run the migrations from code
-  // let conn = pool.get().unwrap();
-  // embedded_migrations::run(&conn).unwrap();
 
   // // Set up the rate limiter
   // let rate_limiter = RateLimit {

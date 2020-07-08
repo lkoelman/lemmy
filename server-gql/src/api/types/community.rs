@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use super::user::UserView;
+use crate::db::{community_view::*, user_view::*};
 
 
 #[derive(Serialize, Deserialize)]
@@ -111,63 +111,4 @@ pub struct TransferCommunity {
   community_id: i32,
   user_id: i32,
   auth: String,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct CommunityView {
-  pub id: i32,
-  pub name: String,
-  pub title: String,
-  pub description: Option<String>,
-  pub category_id: i32,
-  pub creator_id: i32,
-  pub removed: bool,
-  pub published: chrono::NaiveDateTime,
-  pub updated: Option<chrono::NaiveDateTime>,
-  pub deleted: bool,
-  pub nsfw: bool,
-  pub creator_name: String,
-  pub creator_avatar: Option<String>,
-  pub category_name: String,
-  pub number_of_subscribers: i64,
-  pub number_of_posts: i64,
-  pub number_of_comments: i64,
-  pub hot_rank: i32,
-  pub user_id: Option<i32>,
-  pub subscribed: Option<bool>,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct CommunityModeratorView {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
-  pub published: chrono::NaiveDateTime,
-  pub user_name: String,
-  pub avatar: Option<String>,
-  pub community_name: String,
-}
-
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct CommunityFollowerView {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
-  pub published: chrono::NaiveDateTime,
-  pub user_name: String,
-  pub avatar: Option<String>,
-  pub community_name: String,
-}
-
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct CommunityUserBanView {
-  pub id: i32,
-  pub community_id: i32,
-  pub user_id: i32,
-  pub published: chrono::NaiveDateTime,
-  pub user_name: String,
-  pub avatar: Option<String>,
-  pub community_name: String,
 }

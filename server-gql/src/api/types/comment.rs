@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use crate::db::comment_view::*;
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateComment {
@@ -57,61 +58,4 @@ pub struct GetComments {
 #[derive(Serialize, Deserialize)]
 pub struct GetCommentsResponse {
   comments: Vec<CommentView>,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct CommentView {
-  pub id: i32,
-  pub creator_id: i32,
-  pub post_id: i32,
-  pub parent_id: Option<i32>,
-  pub content: String,
-  pub removed: bool,
-  pub read: bool,
-  pub published: chrono::NaiveDateTime,
-  pub updated: Option<chrono::NaiveDateTime>,
-  pub deleted: bool,
-  pub community_id: i32,
-  pub community_name: String,
-  pub banned: bool,
-  pub banned_from_community: bool,
-  pub creator_name: String,
-  pub creator_avatar: Option<String>,
-  pub score: i64,
-  pub upvotes: i64,
-  pub downvotes: i64,
-  pub hot_rank: i32,
-  pub user_id: Option<i32>,
-  pub my_vote: Option<i32>,
-  pub subscribed: Option<bool>,
-  pub saved: Option<bool>,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct ReplyView {
-  pub id: i32,
-  pub creator_id: i32,
-  pub post_id: i32,
-  pub parent_id: Option<i32>,
-  pub content: String,
-  pub removed: bool,
-  pub read: bool,
-  pub published: chrono::NaiveDateTime,
-  pub updated: Option<chrono::NaiveDateTime>,
-  pub deleted: bool,
-  pub community_id: i32,
-  pub community_name: String,
-  pub banned: bool,
-  pub banned_from_community: bool,
-  pub creator_name: String,
-  pub creator_avatar: Option<String>,
-  pub score: i64,
-  pub upvotes: i64,
-  pub downvotes: i64,
-  pub hot_rank: i32,
-  pub user_id: Option<i32>,
-  pub my_vote: Option<i32>,
-  pub subscribed: Option<bool>,
-  pub saved: Option<bool>,
-  pub recipient_id: i32,
 }

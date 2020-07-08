@@ -4,22 +4,17 @@ use crate::{
 };
 
 use crate::settings::Settings;
-// use crate::websocket::UserOperation;
-// use crate::websocket::{
-//   server::{
-//     JoinCommunityRoom, JoinPostRoom, JoinUserRoom, SendAllMessage, SendComment,
-//     SendCommunityRoomMessage, SendPost, SendUserRoomMessage,
-//   },
-//   WebsocketInfo,
-// };
+
 use failure::Error;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
-// Re-rexport api types & ops
-pub mod ops;
+// Re-export request types & ops
+
+pub mod schema;
+pub mod handlers;
 pub mod types;
+pub mod ops;
 
 // pub mod comment {
 //   pub use ops::comment::*;
@@ -71,12 +66,7 @@ impl<T> Oper<T> {
 //  - the input type T (= the form used)
 //  = the result type Response (= the response type)
 pub trait Perform<T> {
-  type Response: serde::ser::Serialize + Send;
-
-  fn perform(
-    &self,
-    conn: &T
-  ) -> Result<Self::Response, Error>;
+  type Response: Serialize + Send;
 }
 
 

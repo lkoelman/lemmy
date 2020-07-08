@@ -1,0 +1,7 @@
+# Documentation:
+# - https://rust-lang.github.io/rustfmt/
+# - https://gist.github.com/Robbepop/f88d896f859712384039813fab939172
+tab_spaces = 2
+fn_args_layout = "Vertical"
+indent_style = "Block"
+edition="2018"

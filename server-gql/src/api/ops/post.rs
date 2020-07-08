@@ -1,4 +1,5 @@
 use crate::api::{Perform, Oper, types::post::*};
+use crate::db::post_view::*;
 
 impl Perform for Oper<CreatePost> {
   type Response = PostResponse;

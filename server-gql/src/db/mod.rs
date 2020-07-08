@@ -11,32 +11,25 @@ use serde::{
 use serde_aux::prelude::deserialize_number_from_string;
 use dgraph_tonic as dgraph;
 use dgraph_tonic::{Client, Query, Mutation, Mutate};
+use getset::{Setters, Getters, CopyGetters};
 
 pub mod common;
 pub use common::traits::*;
 pub use common::dgraph_utils::*;
 
-// FIXME: possibly replace by: mod entity; pub use entity::category;
-#[path = "entity/category.rs"]
-pub mod category;
-#[path = "entity/comment.rs"]
-pub mod comment;
-#[path = "entity/community.rs"]
-pub mod community;
-#[path = "entity/moderator.rs"]
-pub mod moderator;
-#[path = "entity/password_reset_request.rs"]
-pub mod password_reset_request;
-#[path = "entity/post.rs"]
-pub mod post;
-#[path = "entity/private_message.rs"]
-pub mod private_message;
-#[path = "entity/site.rs"]
-pub mod site;
-#[path = "entity/user.rs"]
-pub mod user;
-#[path = "entity/user_mention.rs"]
-pub mod user_mention;
+// NOTE: Alternative (subdir without module) is to declare .rs files
+//       as "pub mod file" and annotate with path macro attribute
+mod entity;
+pub use entity::{
+  category, comment, community, moderator, password_reset_request,
+  post, private_message, site, user, user_mention,
+};
+
+mod query;
+pub use query::{
+  comment_view, community_view, moderator_views, post_view,
+  private_message_view, site_view, user_mention_view, user_view,
+};
 
 // Propagate any error
 // type Result<T> = std::result::Result<T, failure::Error>;
