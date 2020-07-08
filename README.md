@@ -3,16 +3,18 @@
 [![GitHub issues](https://img.shields.io/github/issues-raw/LemmyNet/lemmy.svg)](https://github.com/lkoelman/lemmy/issues)
 [![Translation status](http://weblate.yerbamate.dev/widgets/lemmy/-/lemmy/svg-badge.svg)](http://weblate.yerbamate.dev/engage/lemmy/)
 [![License](https://img.shields.io/github/license/LemmyNet/lemmy.svg)](LICENSE)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/lkoelman/lemmy)
 
 </div>
 
 <p align="center">
   <a href="https://dev.lemmy.ml/" rel="noopener">
- <img width=200px height=200px src="ui/assets/favicon.svg"></a>
+    <img width=200px height=200px src="ui/assets/favicon.svg">
+  </a>
 
- <h3 align="center"><a href="https://dev.lemmy.ml">Lemmy-react</a></h3>
+ <h3 align="center"><a href="https://todo.it">AS8</a></h3>
   <p align="center">
-    A link aggregator / reddit clone for the fediverse, based on <a href="https://github.com/LemmyNet/lemmy">Lemmy</a>.
+    A link aggregator and social network assimilator for the fediverse, based on <a href="https://github.com/LemmyNet/lemmy">Lemmy</a>.
     <br />
     <br />
     ·
@@ -26,14 +28,13 @@
 
 ## About The Project
 
-Lemmy-react will offer the same features as Lemmy (which roughly mirror the features of reddit + federation), plus additional features designed to make it a 'killer app'.
+Lemmy-react will offer the same features as Lemmy (roughly mirroring those of reddit), plus additional features to differentiate it from reddit clones.
 
-## Features
+### Implemented
 
-- See <a href="https://github.com/LemmyNet/lemmy#features"> Lemmy features </a>
-  - federation
+See <a href="https://github.com/LemmyNet/lemmy#features"> Lemmy features. </a>
 
-### Feature Goals
+### Planned
 
 - curation/ranking & moderation policies that are *fully composable*
   - pick and choose your content curation algorithms
