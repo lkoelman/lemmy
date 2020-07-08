@@ -1,16 +1,16 @@
 <div align="center">
 
 [![GitHub issues](https://img.shields.io/github/issues-raw/LemmyNet/lemmy.svg)](https://github.com/lkoelman/lemmy/issues)
-[![Translation status](http://weblate.yerbamate.dev/widgets/lemmy/-/lemmy/svg-badge.svg)](http://weblate.yerbamate.dev/engage/lemmy/)
 [![License](https://img.shields.io/github/license/LemmyNet/lemmy.svg)](LICENSE)
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/lkoelman/lemmy)
 
 </div>
 
 <p align="center">
-  <a href="https://dev.lemmy.ml/" rel="noopener">
+
+  <!-- <a href="https://dev.lemmy.ml/" rel="noopener">
     <img width=200px height=200px src="ui/assets/favicon.svg">
-  </a>
+  </a> -->
 
  <h3 align="center"><a href="https://todo.it">AS8</a></h3>
   <p align="center">
