@@ -1,0 +1,400 @@
+#-*- mode: org -*-
+#+TODO: TODO STARTED WAITING | DEFERRED DONE CANCELLED
+
+
+Development notes
+
+* STARTED Explore Lemmy
+
+** DONE Find components/code for upvoting
+
+- components/post-listing.tsx
+    - class PostListing
+        - render() -> listing() -> <button> -> onClick
+        - handlePostLike()
+
+** DONE Find out how to debug
+
+- use =yarn start= instead of =yarn build=
+    - the =start= script defined in /package.json/ calls =node fuse dev=
+    - /fuse-box/ is a webpack alternative and task runner
+    - =fuse.js= contains the task, and the =dev= task sets =isProduction =
+      false= and does not minify the code
+
+- in firefox, open developer console > Debugger and set break points
+
+* STARTED Rewrite : client side
+
+** DONE Substitute React equivalents for inferno
+   CLOSED: [2020-06-25 Thu 15:31]
+
+Port to react by doing following substitutions
+
+*** Substitutions
+
+Replace imports
+
+#+BEGIN_SRC typescript
+import React, { Component } from "react";
+import ReactDOM from "react-dom";
+import {
+    BrowserRouter,
+    Switch,
+    Route,
+    Link
+} from "react-router-dom";
+
+// Config
+import { i18n } from './i18next';
+import { Trans } from 'react-i18next'; // (T from 'inferno-i18next)
+#+END_SRC
+
+Replacements
+
+- ~class='...'~ ==> ~className='...'~
+    - also some html attributes must be converted to camelCase
+
+- ~style="a: x; b: y; c: z"~ -> ~style={{a: "x", b: "y", c: "z"}}~
+    - regex: ~style="(([\w-]+):([\w#]+);?)+"~
+
+- ~linkEvent~
+    - (option A) bind in constructor, then just function
+    - (option B) use public class field syntax (https://reactjs.org/docs/handling-events.html)
+      and define the method using arrow function
+    - Q: is this necessary in typescript?
+    - regex (single line): ~linkevent\([\s\r\n,\w]+(this\.\w+)[\s]*?\)~
+
+- **handlers**
+    - replace by arrow functions and remove ~x = x.bind(this)~ from constructors
+    - i.e. replace ~(i: ThisClass, event: any)~ -> ~(event: any) =>~
+    - regex: ~(handle[a-zA-Z]+)\([\w\s:,]+?event: any\)~ -> ~$1 = (event: any)~
+      =>
+
+- **inline svg**
+    - https://create-react-app.dev/docs/adding-images-fonts-and-files/
+
+
+** STARTED Use setState correctly
+
+- remove all ~public state~
+- use either of two forms of setState:
+https://reactjs.org/docs/react-component.html#setstate
+
+- regex: ~this\.state\.(\w+) = ([\w.]+)~ -> ~this.setState({ $1 : $2 })~
+
+- regex (nested): ~this\.state\.(\w+)\.(\w+) = ([\w.]+)~ ->
+    - => ~this.setState({ $1 : { ...this.state.$1, $2: $3} })~
+
+** STARTED Use props correctly
+
+E.g. replace <any> by merged RouterProps, Apollo props
+
+
+** STARTED Use router correctly
+
+Check latest docs. If necessary: update props.
+
+
+** STARTED Replace websocket requests + interfaces by GraphQL (Apollo)
+
+*** Notes / Resources
+
+
+- https://www.apollographql.com/docs/react/get-started/
+- https://create-react-app.dev/docs/loading-graphql-files
+    - Apollo has own method
+
+
+- examples:
+    - https://github.com/clintonwoo/hackernews-react-graphql
+
+- For js/ts classes, use old Apollo render props api (<= v2.5):
+    - https://www.apollographql.com/docs/react/v2.5
+    - https://www.apollographql.com/blog/introducing-react-apollo-2-1-c837cc23d926
+    - https://www.apollographql.com/docs/react/api/react-apollo/
+    - https://www.howtographql.com/react-apollo/1-getting-started/
+        - final code:
+          https://github.com/howtographql/react-apollo/tree/master/src/components
+
+*** TODO replace rxjs subscriptions by graphql queries
+
+- In apollo, either use ~<Query>~ or ~<Apolloconsumer>~ depending on when data
+  is needed (see 2.5 docs -> essentials -> "Get started" + "Queries"
+
+*** DONE create interfaces.graphql
+
+interface -> type
+interface (\w+?Form) -> input $1
+type -> union
+([a-zA-Z]): -> $1!
+([a-zA-Z]): ([\w<>]+) -> $1: $2!
+// -> #
+Array<(\w+)> -> [$1]
+number(!?)$ -> Int$1
+snake_case to camelCase: regex +
+https://github.com/microsoft/vscode/issues/12185#issuecomment-414552538
+remove rust keywords
+
+** TODO Name, logos, styling
+
+- Name: , daggr, agg8 (aggregate), as8, asm8 (assimilate)
+
+** DEFERRED Replace classes by functional + react hooks/useState
+   CLOSED: [2020-06-26 Fri 11:09]
+
+*** Apollo GraphQL
+
+For functional components use the ~useQuery~ hook instead
+(instead of the old Apollo render props api).
+
+*** Functional components (React.FC)
+
+- https://fettblog.eu/typescript-react/components/#functional-components
+    - outdated: use React.FC i.s.o. FunctionComponent
+    - React.FC + props type: "prefered way of using functional components in
+      TypeScript is by using the generic type"
+
+- https://levelup.gitconnected.com/using-react-functional-components-with-hooks-in-typescript-6d61075edddc
+    - ctrl+f "due to typescript generics"
+    - useState + generic: "We can solve this by using generics when working with hooks"
+
+- https://www.carlrippon.com/typed-usestate-with-typescript/
+    - useState + generics
+
+*** Hooks: tutorials
+
+Links:
+
+ https://github.com/rehooks/awesome-react-hooks
+
+Example code:
+
+https://github.com/jasminmif/react-interactive-paycard/blob/master/src/screens/MainScreen/components/card/index.js
+
+https://github.com/leahjlou/react-hooks-examples/blob/master/src/login-form/LoginForm.js
+
+(typescript + functional + hooks) https://github.com/clintonwoo/hackernews-react-graphql/blob/master/src/components/news-feed.tsx
+
+** DEFERRED OpenAPI approach
+
+*** Use OpenAPI spec + codegen to remove duplicate code
+
+- Official tool: https://github.com/openapitools/openapi-generator
+  - has npm wrapper:
+    - https://openapi-generator.tech/#try
+    - https://github.com/openapitools/openapi-generator#17---npm
+    - https://www.npmjs.com/package/@openapitools/openapi-generator-cli
+
+*** For rust
+
+- use Paperclip or OpenAPI generator
+
+*** For JS/TS
+
+- use official OpenAPI generatior
+    - options for JS: https://openapi-generator.tech/docs/generators/javascript/
+    - different TS generators for frameworks angular, axios, rxjs, ...
+      https://openapi-generator.tech/docs/generators
+
+- alternative:
+  https://github.com/progresso-group/openapi-typescript-client-api-generator
+    - also generates service using async/await + axios library
+
+- alternative: https://www.npmjs.com/package/openapi-generator
+- alternative: https://www.npmjs.com/package/typescript-openapi-generator
+
+
+* STARTED Rewrite : server side
+
+*** Notes/Resources for Juniper/GraphQL
+
+
+- Juniper: GraphQL for rust : https://graphql-rust.github.io/)
+    - https://github.com/graphql-rust/juniper
+
+- Examples:
+    - + actix: https://github.com/actix/examples/tree/master/juniper
+    - https://dev.to/open-graphql/building-powerful-graphql-servers-with-rust-3gla
+    - https://blog.logrocket.com/how-to-create-a-graphql-server-in-rust/
+
+- Juniper from graphql syntax : https://docs.rs/juniper-from-schema/0.5.2/juniper_from_schema/)
+    - Example: https://github.com/husseinraoouf/graphql-actix-example
+        - use of PostgreSQL connection
+
+*** TODO implement schema and transactions with Juniper + Dgraph
+
+- [X] define schema
+     - load into dgraph instance for testing validity & queries
+
+- [/] implement CRUD and list operations for all types in ~db/...~
+
+
+4. [ ] organize api
+     - see old ~routes/api.rs~: for now we can have one scope per operation type
+         - this allows us to split up the graph schema with different root query
+           and mutation for each operation type
+         - however: this complicates things at the client side
+
+
+**** current implementation
+
+  - ~api/<type.rs>~ lists the operations, the input forms, and the response
+    types
+
+  - execution of these operations is implemented in each
+    ~api/<type>.rs/Oper<op_type>~ trait implementation
+
+    - this used the types and CRUD operations from ~db/<type>.rs~ to do the
+      query/mutation using the input form, and put it in the response form.
+
+
+**** simplified implementation
+
+  - ~Oper<type>~ is converted into a Juniper Query, with the form types as
+    GraphQL input types
+
+     - all the operations (part of root query) must be implemented in a single
+       Query block, e.g. in ~api/mod.rs~, but the input and output forms can be
+       imported from submodules.
+
+    - however, those queries can still be dispatched to ~Oper<type>~ in the
+      submodule
+
+    - NOTE: the server-side code will not really be simpified, you will still
+      have API types and DB types. However, the client-side code will be
+      simplified because of the exported graphQL operations (with the
+      transactions defined in ~api/...~ being the single source of truth.
+
+
+**** implementation using raw juniper
+
+     - examples
+         - https://github.com/graphql-rust/juniper/blob/master/juniper/src/tests/schema.rs
+
+     - implement graphql transaction types in ~api/<type>.rs~
+         - replace each ~Oper~ by a root Query member or implementation in the
+           Juniper field if it is a raw DB type query
+
+     - implement DB types in ~db/<type>.rs~
+
+     - implement CRUD operations in ~db/<type>.rs~
+         - the operations in ~api/...~ are dispatched to the CRUD implementation
+           in ~db/...~
+         - a generic trait for CRUD can be defined in the ~db/<type>.rs~
+         - implementation of the CRUD trait for a specific DB can be in ~db/dbname/...~
+
+
+**** implement resolvers
+
+     - GraphQL transactions (Query, Mutation) need to resolve to DB transaction
+
+     - shared fundamental types between frontend - backend
+         - fundamental type queries/mutations can be implemented as simple
+           resolver (e.g. using a template: just fill in fields)
+
+     - frontent has extra types/transactions that must resolve to DB
+       Queries/Mutations
+         - e.g. PostView type (composed type, containing Post, or Post as
+           interface)
+         - these must be implemented as resolvers
+
+     - steps to implement:
+         1. check ~api/abc.rs~ for supported api operations and data types
+              - each ~impl Perform for Oper<xyz>~ has the input form type and
+                response type
+         2. implement as graphql file (types, queries, mutations)
+              - every *AbcForm* type becomes a mutation
+              - every *AbcResponse* type becomes a query
+         3. write DB resolvers for queries & mutations
+
+
+
+
+
+*** CANCELLED define Juniper schema with PostgreSQL backend
+    CLOSED: [2020-06-29 Mon 17:28]
+
+Manual method:
+
+- [ ] annotate Rust structs with Juniper macros
+    - does not seem to be possible in
+    - see types ~src/api/xyz.rx~ and ~src/db/{xyz.rs, xyz_view.rs}~
+
+- [ ] implement queries and mutations
+    - one Query object, one Mutation object
+
+Automatic method:
+
+- juniper-from-graphql -> declare struct -> decorate struct
+
+*** TODO rewrite tests in each module
+
+* STARTED Features
+
+See project description  file [[file:~/cloudstore_p/notes/projects/project_taggit.md][taggit]]
+
+** TODO composable ranking & moderation policies
+
+*** tab bar with policies inside channel
+
+Activate tab -> views channel filtered by that policy alone.
+
+*** button to pin/combine policies
+
+Pin button -> views channel filtered by currently active policies + this policy
+
+** TODO RSS integration
+
+*** RSS tab
+
+Shown next to policies inside channel: your rss feeds for this channel.
+
+** TODO social network integration
+
+*** Social tab
+
+Shown next to policies inside channel: your social feeds for this channel.
+These are people/organizations followed on twitter, facebook, ...
+
+** STARTED channels based on primary tag + default policies
+
+*** STARTED menu bar with channels
+
+Examples:
+- mattermost sidebar (layout)
+- devhub sidebar (press settings)
+
+*** TODO channel definition
+
+** TODO tag assignment and tag-based score
+
+- Upvote action assigns #like tag
+- tags shown by frequency
+- post score assigned based on tags
+- interactive menu for tag assignment based
+    - https://github.com/brillout/awesome-react-components#tag-input
+    - https://github.com/brillout/awesome-react-components#select
+
+* React notes
+
+For newcomers: there are basically two 'paradigms' for using React.
+
+The first one is object-oriented using ES6 classes (regular classes in Typescript),
+described [[https://reactjs.org/docs/state-and-lifecycle.html][here]].
+
+The second one is functional, using React hooks, described [[https://reactjs.org/docs/hooks-intro.html][here]].
+
+- data flows down and is usually passed from parent state to child props.
+- you can skip this passing down using the Context API
+
+** Example projects
+
+list of projects: https://madewithreact.com/
+
+typescript + classes + redux: https://github.com/withspectrum/spectrum
+
+typescript + functional + hooks + redux: https://github.com/devhubapp/devhub
+
+*** Mattermost : https://github.com/mattermost/mattermost-webapp
+
+- [[https://github.com/mattermost/mattermost-webapp/blob/master/components/sidebar/][sidebar]]
