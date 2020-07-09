@@ -1,5 +1,8 @@
 use crate::db::*;
-use crate::db::common::dgraph_utils::QueryBuilder;
+use crate::db::common::dgraph_utils::{
+  QueryBuilder, DgraphFunction as DFn
+};
+use crate::strfy;
 
 #[derive(
   PartialEq, Debug, Serialize, Deserialize, Clone,
@@ -47,9 +50,10 @@ pub struct CommentQueryBuilder<'a> {
 }
 
 impl<'a> CommentQueryBuilder<'a> {
+
   pub fn create(conn: &'a dgraph_tonic::Client) -> Self {
 
-    let query = QueryBuilder::new();
+    let query = QueryBuilder::new(conn, Some("users".to_string()));
 
     CommentQueryBuilder {
       conn,
@@ -117,23 +121,33 @@ impl<'a> CommentQueryBuilder<'a> {
     self
   }
 
+  /**
+   * List results of query.
+   */
   pub fn list(self) -> Result<Vec<CommentView>, Error> {
 
-    let mut query = self.query;
+    let mut query = self.query.root_query(
+                      DFn::type_name("Comment".to_string()));
 
     // The view lets you pass a null user_id, if you're not logged in
+    // FIXME: does the CommentView depend on the user asking for it?
     if let Some(my_user_id) = self.my_user_id {
-      query = query.filter(user_id.eq(my_user_id));
+      query = query.filter(DFn::eq(strfy!(my_user_id)));
     } else {
-      query = query.filter(user_id.is_null());
+      query = query.filter(DFn::NOT)
+                   .filter(DFn::has("User.id"))
     }
 
     if let Some(for_creator_id) = self.for_creator_id {
-      query = query.filter(creator_id.eq(for_creator_id));
+      query = query.linked_predicate("Comment.creator")
+                   .filter(DFn::eq("uid", stringify!(for_creator_id)));
     };
 
     if let Some(for_community_id) = self.for_community_id {
-      query = query.filter(community_id.eq(for_community_id));
+      query = query.linked_predicate("Comment.post")
+                   .filter("eq(uid, {})", for_post_id)
+                   .linked_predicate("Post.community")
+                   .filter("eq(uid, {})", for_community_id)
     }
 
     if let Some(for_post_id) = self.for_post_id {

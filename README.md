@@ -22,7 +22,7 @@
     ·
     <a href="https://github.com/lkoelman/lemmy/issues">Request Feature</a>
     ·
-    <a href="https://github.com/LemmyNet/lemmy/blob/master/RELEASES.md">Releases</a>
+    <a href="https://github.com/lkoelman/lemmy/blob/master/RELEASES.md">Releases</a>
   </p>
 </p>
 
@@ -36,19 +36,15 @@ See <a href="https://github.com/LemmyNet/lemmy#features"> Lemmy features. </a>
 
 ### Planned
 
-- curation/ranking & moderation policies that are *fully composable*
-  - pick and choose your content curation algorithms
-  - write your own curation rules/algorithm
+- Fully composable content curation, ranking, and moderation policies
 
-- custom submission bots
-  - write your own submission bot (~scraper)
-  - RSS integration
+- Custom submission bots, including RSS feeds and scrapers
 
-- tag-based voting and link aggregation/curation
+- Tag-based voting system, working in concert with curation & ranking algorithms
 
-- smart contract integration
+- Smart contract integration
   - reward community contributions
-  - design complex community management systems (turn your community into a [DAO](https://en.wikipedia.org/wiki/Decentralized_autonomous_organization))
+  - add custom community management systems (turn community into a [DAO](https://en.wikipedia.org/wiki/Decentralized_autonomous_organization))
 
 ## Built With
 

@@ -278,6 +278,20 @@ pub fn is_valid_username(name: &str) -> bool {
   VALID_USERNAME_REGEX.is_match(name)
 }
 
+/// Shorthand for .to_string()
+macro_rules! tostr {
+  ($expression:expr) => {
+    expr.to_string();
+  };
+}
+
+/// Convert expression to String (stringify! with -> String)
+macro_rules! strfy {
+  ($expression:expr) => {
+    stringify!(expr).to_string();
+  };
+}
+
 #[cfg(test)]
 mod tests {
   use crate::{

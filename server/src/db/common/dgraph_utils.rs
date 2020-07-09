@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::string::ToString;
 use dgraph_tonic::{Response as DgraphResponse, DgraphError};
+use indextree::{Arena as Tree};
 use crate::db::*;
 
 /**
@@ -36,26 +38,27 @@ pub struct NodeList<T> {
  * See https://dgraph.io/docs/query-language/#functions
  */
 #[allow(non_camel_case_types)]
-#[derive(Debug, Eq, PartialEq, ToString)]
+#[derive(Debug, Display, Eq, PartialEq)]
 pub enum DgraphFunction {
-  has { predicate: String },
-  uid { id: i64 },
+  NOP, // no func (empty)
+  has(String),
+  uid(i64),
   #[strum(to_string = "uid_in")]
-  uid_link,
+  uid_link(i64),
   #[strum(to_string = "type")]
-  type_name { name: String },
-  eq { repr: String },
-  ge { repr: String },
-  gt { repr: String },
-  le { repr: String },
-  lt { repr: String },
-  allofterms { repr: String },
-  anyofterms { repr: String },
-  regexp { repr: String },
-  fuzzy_match { repr: String },
-  alloftext { repr: String },
+  type_name(String),
+  eq(String),
+  ge(String),
+  gt(String),
+  le(String),
+  lt(String),
+  allofterms(String),
+  anyofterms(String),
+  regexp(String),
+  fuzzy_match(String),
+  alloftext(String),
   // other functions
-  other {func: String, args_str: String} ,
+  func(String, String), // name, args
   // connecting filters
   AND, OR, NOT,
   #[strum(to_string = "(")]
@@ -66,14 +69,15 @@ pub enum DgraphFunction {
   // near, within, intersects, 
 }
 
-type DgFn = DgraphFunction;
+type DFn = DgraphFunction;
 
 impl DgraphFunction {
   /// Print function for use in Dgraph query
   pub fn print(&self) -> String {
     match self {
       // TODO: implement me
-      DgFn::other { func, args_str } => format!("{}({})", func, args_str),
+      DFn::func(name, args) => format!("{}({})", name, args),
+      DFn::has(id) => format!("{}({})", self, id),
       _ => "ERROR".to_string(),
     }
   }
@@ -87,10 +91,12 @@ pub struct QueryBuilder<'a> {
   client: &'a dgraph_tonic::Client,
   root_func: DgraphFunction,
   nodes: Vec<HashMap<String, String>>,
+  tree: Tree::new(),
+  last_filter: DgraphFunction,
 }
 
 
-// TODO: chain with .a()?.b()? and use Result<&'a mut Self, Error
+// TODO: support parentheses in filters
 
 /**
  * Builder pattern for Dgraph queries.
@@ -109,17 +115,18 @@ impl<'a> QueryBuilder<'a> {
 
     QueryBuilder {
       client: client,
-      root_func: DgraphFunction::uid { id: 0},
+      root_func: DgraphFunction::uid(0),
       nodes: vec![node],
+      last_filter: DgraphFunction::NOP,
     }
 
   }
 
   pub fn init_node_block(name: String) -> HashMap<String, String> {
     let mut nested = HashMap::new();
-    nested.insert("_:pred_name", name);
-    nested.insert("_:sort", "".into());
-    nested.insert("_:filter", "".into());
+    nested.insert("_:pred_name".into(), name);
+    // nested.insert("_:sort".into(), "".into());
+    // nested.insert("_:filter".into(), "".into());
     nested
   }
 
@@ -129,7 +136,7 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Set the root query function.
    */
-  pub fn root_query<'a>(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
+  pub fn root_query(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
     self.root_func = func;
     self
   }
@@ -142,15 +149,15 @@ impl<'a> QueryBuilder<'a> {
    *              E.g. "predicate name", "expand(_all_)", 
    *              "expand(type_name)", "count(predicate_name)"
    */
-  pub fn scalar_predicate<'a>(
+  pub fn scalar_predicate(
       &'a mut self,
       pred: String,
       suffix: Option<String>
     ) -> &'a mut QueryBuilder
   {
-    let node = self.nodes.len() - 1;
-    if !self.nodes[node].contains_key(pred) {
-      self.nodes[node].insert(pred, suffix.unwrap_or("".to_string());
+    let i_node = self.nodes.len() - 1;
+    if !self.nodes[i_node].contains_key(&pred) {
+      self.nodes[i_node].insert(pred, suffix.unwrap_or("".to_string()));
     }
     self
   }
@@ -158,7 +165,7 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Query linked predicate (i.e. follow edge)
    */
-  pub fn linked_predicate<'a>(&'a mut self, pred: String) -> &'a mut QueryBuilder {
+  pub fn linked_predicate(&'a mut self, pred: String) -> &'a mut QueryBuilder {
     let nested = Self::init_node_block(pred);
     self.nodes.push(nested);
     self
@@ -168,31 +175,36 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Add filter function to current predicate or root query.
    */
-  pub fn filter<'a>(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
-    // self.filter_funcs.push(func);
-    // self.nodes[self.nodes.len()-1]
-    //       .entry("_:filter").or_insert(func.print())
-    // TODO: no initial comma, also in sort() method
-    self.nodes[self.nodes.len()-1].insert("_:filter",
-            self.nodes.get_mut("_:sort").unwrap_or("".into())
-                      .push_str(", " + func.print()));
+  pub fn filter(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
+
+    let suffix = match self.last_filter {
+      DFn::AND | DFn::OR | DFn::NOT => format!("{} {}",
+          self.last_filter, func.print()),
+      _ => func.print(),
+    }
+    self.last_filter = func;
+
+    self.nodes[self.nodes.len()-1].entry("_:filter".to_string())
+      .and_modify(|s| s.push_str(&format!(", {}", suffix)))
+      .or_insert(suffix);
+
     self
   }
 
   /**
    * Add sorting to current predicate or root query.
+   * 
+   * @param order : "asc" or "desc"
    */
-  pub fn sort<'a>(&'a mut self, pred: String, asc: bool) -> &'a mut QueryBuilder {
-    let ident = if asc {"orderasc"} else {"orderdesc"};
-    let clause = format!("{}: {}", ident, pred);
+  pub fn sort(&'a mut self, pred: String, order: &str) -> &'a mut QueryBuilder {
 
-    node = self.nodes.len()-1;
-    let &mut predicates = self.nodes[node];
+    assert!(["asc", "desc"].contains(&order));
+    let clause = format!("order{}: {}", order, pred);
 
-    predicates.insert(
-      "_:sort",
-      predicates.get_mut("_:sort").unwrap_or("".into())
-                .push_str(", " + clause));
+    self.nodes[self.nodes.len()-1].entry("_:sort".to_string())
+      .and_modify(|s| s.push_str(&format!(", {}", clause)))
+      .or_insert(clause);
+
     self
   }
 
@@ -211,14 +223,14 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Build string representation of the query
    */
-  pub fn build(&self, name: Option<String>) -> String {
+  pub fn build(&self) -> String {
     format!(r#"query {{ {node} }}"#, node=self.build_node(0))
   }
 
   /***
    * Build query block for graph node at nesting level i.
    */
-  pub fn build_node(&self, i: i64) -> String {
+  pub fn build_node(&self, i: usize) -> String {
 
     if i >= self.nodes.len() {
       return "".to_string()
@@ -230,33 +242,28 @@ impl<'a> QueryBuilder<'a> {
       .collect::<Vec<String>>()
       .join(",\n");
 
-    let sort_clause: String = self.nodes[i]
+    // sort clauses occur in argument list to query or predicate
+    let sort_clause: &String = self.nodes[i]
+      .get("_:sort").unwrap_or(&"".to_owned());
+
+    // filter clauses are wrapped in @filter(...)
+    let filter_clause = match self.nodes[i].get("_:filter") {
+      Some(clause) => format!("@filter({})", &clause),
+      None => "".to_string(),
+    };
+
 
     format!(r#"{node_name}({root_query} {sort_clause}) {filter_clause} {{
         {scalar_preds}
-        {nested_pred}
+        {nested_preds}
       }}}}"#,
-      node_name = self.nodes[i]["_:pred_name"]
-      root_query = if i==0 { self.root_func.print() + ", " } else { "" }
-      sort_clause = self.nodes[i]["_:sort"],
-      filter_clause = self.nodes[i]["_:filter"],
+      node_name = self.nodes[i]["_:pred_name"],
+      root_query = if i==0 { self.root_func.print() + ", " } else { "".to_string() },
+      sort_clause = sort_clause,
+      filter_clause = filter_clause,
       scalar_preds = scalar_preds,
       nested_preds = self.build_node(i+1),
     )
-  }
-
-  /**
-   * Combine the components of the filter clause
-   */
-  pub fn build_filter_clause(&self) -> String {
-    if self.filter_funcs.len() == 0 {
-      return "".into();
-    }
-    let parts: Vec<String> = self.filter_funcs.iter()
-                     .map(|op| op.print())
-                     .collect();
-
-    format!("@filter({})", parts.join(" "))
   }
 
   
