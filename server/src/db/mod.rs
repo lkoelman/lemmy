@@ -15,7 +15,6 @@ use getset::{Setters, Getters, CopyGetters};
 
 pub mod common;
 pub use common::traits::*;
-pub use common::dgraph_utils::*;
 
 // NOTE: Alternative (subdir without module) is to declare .rs files
 //       as "pub mod file" and annotate with path macro attribute

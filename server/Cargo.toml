@@ -31,8 +31,8 @@ actix-rt = "1.1.1"
 log = "0.4.0"
 env_logger = "0.7.1"
 rand = "0.7.3"
-strum = "0.18.0"
-strum_macros = "0.18.0"
+strum = "0.18"
+strum_macros = "0.18"
 jsonwebtoken = "7.0.1"
 regex = "1.3.5"
 lazy_static = "1.3.0"
@@ -53,6 +53,7 @@ juniper = { git = "https://github.com/graphql-rust/juniper", branch = "master"}
 juniper_actix = { git = "https://github.com/graphql-rust/juniper", branch = "master"}
 # juniper-from-schema = "0.5.2"
 dgraph-tonic = "0.6"
+dgraph_monkey = { path = "../../dgraph-monkey" }
 async-trait = "0.1"
 getset = "0.1"
 indextree = "4.2"

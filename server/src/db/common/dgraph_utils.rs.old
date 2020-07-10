@@ -41,24 +41,24 @@ pub struct NodeList<T> {
 #[derive(Debug, Display, Eq, PartialEq)]
 pub enum DgraphFunction {
   NOP, // no func (empty)
-  has(String),
+  func(String, String), // generic function: name, args
+  // Dgraph functions
+  has(String), // arg: predicate
   uid(i64),
   #[strum(to_string = "uid_in")]
-  uid_link(i64),
+  uid_link(String, i64), // args: predicate, uid
   #[strum(to_string = "type")]
   type_name(String),
-  eq(String),
-  ge(String),
-  gt(String),
-  le(String),
-  lt(String),
-  allofterms(String),
-  anyofterms(String),
-  regexp(String),
-  fuzzy_match(String),
-  alloftext(String),
-  // other functions
-  func(String, String), // name, args
+  eq(String, String),
+  ge(String, String),
+  gt(String, String),
+  le(String, String),
+  lt(String, String),
+  allofterms(String, String),
+  anyofterms(String, String),
+  regexp(String, String),
+  fuzzy_match(String, String),
+  alloftext(String, String),
   // connecting filters
   AND, OR, NOT,
   #[strum(to_string = "(")]
@@ -75,35 +75,26 @@ impl DgraphFunction {
   /// Print function for use in Dgraph query
   pub fn print(&self) -> String {
     match self {
-      // TODO: implement me
+      // TODO: implement all functions
       DFn::func(name, args) => format!("{}({})", name, args),
-      DFn::has(id) => format!("{}({})", self, id),
+      DFn::has(pred) => format!("{}({})", self, pred),
       _ => "ERROR".to_string(),
     }
   }
 }
 
+// TODO: support parentheses in filters
 
-/**
- * Helper for bulding Dgraph queries.
- */
+
 pub struct QueryBuilder<'a> {
   client: &'a dgraph_tonic::Client,
   root_func: DgraphFunction,
-  nodes: Vec<HashMap<String, String>>,
-  tree: Tree::new(),
+  tree: indextree::Arena<HashMap<String, String>>,
+  root_node: indextree::NodeId,
+  current_node: indextree::NodeId,
   last_filter: DgraphFunction,
 }
 
-
-// TODO: support parentheses in filters
-
-/**
- * Builder pattern for Dgraph queries.
- * 
- * EXAMPLE
- * -------
- */
 impl<'a> QueryBuilder<'a> {
   
   /**
@@ -111,16 +102,24 @@ impl<'a> QueryBuilder<'a> {
    */
   pub fn new(client: &dgraph_tonic::Client, name: Option<String>) -> QueryBuilder {
 
-    let node = Self::init_node_block(name.unwrap_or("all".into()));
+    let mut tree = indextree::Arena::new();
+
+    // Add some new nodes to the arena
+    let preds = Self::init_node_block(
+      name.unwrap_or("all".into()));
+    let root_id = tree.new_node(preds);
 
     QueryBuilder {
       client: client,
       root_func: DgraphFunction::uid(0),
-      nodes: vec![node],
+      tree: tree,
+      root_node: root_id,
+      current_node: root_id,
       last_filter: DgraphFunction::NOP,
     }
 
   }
+
 
   pub fn init_node_block(name: String) -> HashMap<String, String> {
     let mut nested = HashMap::new();
@@ -155,9 +154,10 @@ impl<'a> QueryBuilder<'a> {
       suffix: Option<String>
     ) -> &'a mut QueryBuilder
   {
-    let i_node = self.nodes.len() - 1;
-    if !self.nodes[i_node].contains_key(&pred) {
-      self.nodes[i_node].insert(pred, suffix.unwrap_or("".to_string()));
+    let preds = self.tree[self.current_node].get_mut();
+
+    if !preds.contains_key(&pred) {
+      preds.insert(pred, suffix.unwrap_or("".to_string()));
     }
     self
   }
@@ -165,9 +165,55 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Query linked predicate (i.e. follow edge)
    */
-  pub fn linked_predicate(&'a mut self, pred: String) -> &'a mut QueryBuilder {
-    let nested = Self::init_node_block(pred);
-    self.nodes.push(nested);
+  pub fn linked_predicate<T>(
+      &'a mut self, pred: String
+    ) -> &'a mut QueryBuilder
+    where 
+      String: From<T> {
+    // TODO: check if predicate exists at this level
+    let predicate: String = pred.into();
+    let nested_preds = Self::init_node_block(predicate);
+    let nested_node = self.tree.new_node(nested_preds);
+    self.current_node.append(nested_node, &mut self.tree);
+    self.current_node = nested_node;
+    self
+  }
+
+
+  /**
+   * Go back to parent node (parent scope "{...}" in query)
+   */
+  pub fn pop_predicate(&'a mut self) -> &'a mut QueryBuilder {
+    // let ancestors = self.current_node.ancestors(&self.tree);
+    // ancestors.skip(1); // current node
+    // self.current_node = ancestors.next().unwrap();
+    self.current_node = self.tree[self.current_node].parent().unwrap();
+    self
+  }
+
+  /**
+   * Go back to parent node (parent scope "{...}" in query)
+   */
+  pub fn pop(&'a mut self, num: usize) -> &'a mut QueryBuilder {
+    let ancestors = self.current_node.ancestors(&self.tree);
+    ancestors.skip(num); // 1 (current) + num_pop - 1
+    self.current_node = ancestors.next().unwrap();
+    self
+  }
+
+  /**
+   * Add filter function to current predicate or root query.
+   */
+  pub fn filter_with(&'a mut self, clause: &str) -> &'a mut QueryBuilder {
+
+    let suffix = clause.to_string();
+
+    let preds = self.tree[self.current_node].get_mut();
+
+    preds.entry("_:filter".to_string())
+      .and_modify(|s| s.push_str(&format!(", {}", suffix)))
+      .or_insert(suffix);
+
     self
   }
 
@@ -175,21 +221,71 @@ impl<'a> QueryBuilder<'a> {
   /**
    * Add filter function to current predicate or root query.
    */
-  pub fn filter(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
+  pub fn filter<T, U>(
+    &'a mut self, func: &str, arg1: T, arg2: U
+  ) -> &'a mut QueryBuilder
+  where
+    T : ToString, U: ToString {
+    // String: From<T>, String: From<U> {
+    // T : Into<String>, U: Into<String> {
+
+    let mut args: String = arg1.to_string();
+    let a2: String = arg2.to_string();
+    
+    if a2.len() > 0 {
+      args.push(',');
+      args.push_str(&a2);
+    }
+
+    let mut clause = format!("{}({})", func, args);
+    
+    self.filter_with(&clause)
+  }
+
+  /**
+   * Add filter function to current predicate or root query.
+   */
+  pub fn filter_if<T>(
+    &'a mut self, func: &str, arg1: Option<T>
+  ) -> &'a mut QueryBuilder
+  where
+    T : ToString {
+    // String: From<T> {
+
+    if let Some(val) = arg1 {
+      self.filter(func, val, "")
+    } else {
+      self
+    }
+  }
+
+
+  /**
+   * Add filter function to current predicate or root query.
+   */
+  pub fn filter_func(&'a mut self, func: DgraphFunction) -> &'a mut QueryBuilder {
 
     let suffix = match self.last_filter {
       DFn::AND | DFn::OR | DFn::NOT => format!("{} {}",
           self.last_filter, func.print()),
       _ => func.print(),
-    }
+    };
     self.last_filter = func;
 
-    self.nodes[self.nodes.len()-1].entry("_:filter".to_string())
-      .and_modify(|s| s.push_str(&format!(", {}", suffix)))
-      .or_insert(suffix);
-
-    self
+    self.filter_with(&suffix)
   }
+
+  /**
+   * Add filter function to current predicate or root query.
+   */
+  pub fn filter_args(&'a mut self, func: &str, args: &[&str]) -> &'a mut QueryBuilder {
+
+    let suffix = format!("{}({})", func, 
+      args.iter().map(|&s| s.to_string()).collect::<Vec<_>>().join(", "));
+
+    self.filter_with(&suffix)
+  }
+
 
   /**
    * Add sorting to current predicate or root query.
@@ -201,7 +297,9 @@ impl<'a> QueryBuilder<'a> {
     assert!(["asc", "desc"].contains(&order));
     let clause = format!("order{}: {}", order, pred);
 
-    self.nodes[self.nodes.len()-1].entry("_:sort".to_string())
+    let preds = self.tree[self.current_node].get_mut();
+
+    preds.entry("_:sort".to_string())
       .and_modify(|s| s.push_str(&format!(", {}", clause)))
       .or_insert(clause);
 
@@ -232,41 +330,68 @@ impl<'a> QueryBuilder<'a> {
    */
   pub fn build_node(&self, i: usize) -> String {
 
-    if i >= self.nodes.len() {
-      return "".to_string()
+    let mut iter = self.root_node.descendants(&self.tree);
+
+    let mut query_str = "query { ".to_string();
+
+    let mut prev_depth: i64 = 0;
+
+    for (k_node, node) in iter.enumerate() {
+
+      // Depth in tree (ancestors include current node)
+      let depth = (node.ancestors(&self.tree).collect::<Vec<_>>().len() as i64) - 1;
+
+      // Close previous blocks
+      let depth_diff = prev_depth - depth;
+      if depth_diff >= 0 && k_node > 0 {
+        let num_close = depth_diff + 1;
+        for i in 0..num_close {
+          query_str.push('}')
+        }
+      }
+
+      prev_depth = depth;
+
+      let predicates = self.tree[node].get();
+
+      // Predicates to query for this node
+      let scalar_preds: String = predicates.iter()
+        .filter(|(k, v)| !k.starts_with("_:"))
+        .map(|(k, v)| k.to_owned() + v)
+        .collect::<Vec<String>>()
+        .join(",\n");
+
+      // sort clauses occur in argument list to query or predicate
+      let sort_clause = match predicates.get("_:sort") {
+        Some(clause) => clause.to_owned(),
+        None => "".to_string(),
+      };
+
+      // filter clauses are wrapped in @filter(...)
+      let filter_clause = match predicates.get("_:filter") {
+        Some(clause) => format!("@filter({})", clause),
+        None => "".to_string(),
+      };
+
+      // Open a new block for this node
+      query_str.push_str(
+        &format!(
+        r#"{node_name}({root_query} {sort_clause}) {filter_clause} {{
+          {scalar_preds}
+          {nested_preds}
+        "#,
+          node_name = predicates["_:pred_name"],
+          root_query = if depth==0 { self.root_func.print() + ", " } else { "".to_string() },
+          sort_clause = sort_clause,
+          filter_clause = filter_clause,
+          scalar_preds = scalar_preds,
+          nested_preds = self.build_node(i+1))
+      );
     }
 
-    let scalar_preds: String = self.nodes[i].iter()
-      .filter(|(k, v)| !k.starts_with("_:"))
-      .map(|(k, v)| [*k, *v].concat())
-      .collect::<Vec<String>>()
-      .join(",\n");
-
-    // sort clauses occur in argument list to query or predicate
-    let sort_clause: &String = self.nodes[i]
-      .get("_:sort").unwrap_or(&"".to_owned());
-
-    // filter clauses are wrapped in @filter(...)
-    let filter_clause = match self.nodes[i].get("_:filter") {
-      Some(clause) => format!("@filter({})", &clause),
-      None => "".to_string(),
-    };
-
-
-    format!(r#"{node_name}({root_query} {sort_clause}) {filter_clause} {{
-        {scalar_preds}
-        {nested_preds}
-      }}}}"#,
-      node_name = self.nodes[i]["_:pred_name"],
-      root_query = if i==0 { self.root_func.print() + ", " } else { "".to_string() },
-      sort_clause = sort_clause,
-      filter_clause = filter_clause,
-      scalar_preds = scalar_preds,
-      nested_preds = self.build_node(i+1),
-    )
+    query_str
   }
-
-  
+ 
 }
 
 /**

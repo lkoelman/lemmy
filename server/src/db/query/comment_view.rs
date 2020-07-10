@@ -1,9 +1,9 @@
 use crate::db::*;
-use crate::db::common::dgraph_utils::{
+use dgraph_monkey::builder::{
   QueryBuilder, DgraphFunction as DFn
 };
-use crate::strfy;
 
+// TODO: annotate with Serde attributes for de-serializing from DB
 #[derive(
   PartialEq, Debug, Serialize, Deserialize, Clone,
 )]
@@ -48,6 +48,50 @@ pub struct CommentQueryBuilder<'a> {
   page: Option<i64>,
   limit: Option<i64>,
 }
+
+// TODO: alternative: use query wit vars
+//- https://dgraph.io/docs/query-language/#graphql-variables
+//- https://docs.rs/dgraph-tonic/0.6.3/dgraph_tonic/trait.Query.html#tymethod.query_with_vars
+
+const COMMENT_QUERY = r#"
+query comment_view($user_id: int, $now: dateTime) {
+
+  # pre-filter eligible comments
+  subscribed as var(func: uid(&a)) {
+    ...
+  }
+
+  # pre-filter eligible comments
+  saved as var(func: uid($a)) {
+    ...
+  }
+
+  # Calculate hot rank for each post
+  hot_posts as var(func: type(User)) {
+    User.likesPost @facets(valance : score) {
+
+      # TODO: WRONG: score must be the sum of likes
+      score as sum(valence)
+
+      sign as math(cond(score < 0, -1, 1))
+
+      hot_rank as math(10000 * sign * 
+         log(1 + (score * sign)) / 
+         pow((((since($now) - since(published))/3600) + 2), 1.8))
+    }
+
+  }
+
+  root(func: uid(A,B,C)) @filter(type(Comment)) {
+    # TODO: aggregate fields of CommentView here
+    expand(Comment)
+    post {
+      hot_rank : val(hot_rank)
+    }
+  }
+}
+
+"#;
 
 impl<'a> CommentQueryBuilder<'a> {
 
@@ -124,103 +168,239 @@ impl<'a> CommentQueryBuilder<'a> {
   /**
    * List results of query.
    */
-  pub fn list(self) -> Result<Vec<CommentView>, Error> {
+  pub fn list2(self) -> Result<Vec<CommentView>, Error> {
 
-    let mut query = self.query.root_query(
-                      DFn::type_name("Comment".to_string()));
+    let mut query = String::with_capacity(500);
 
-    // The view lets you pass a null user_id, if you're not logged in
-    // FIXME: does the CommentView depend on the user asking for it?
+
+    // Filter comment that are saved or occur in followed communities
     if let Some(my_user_id) = self.my_user_id {
-      query = query.filter(DFn::eq(strfy!(my_user_id)));
-    } else {
-      query = query.filter(DFn::NOT)
-                   .filter(DFn::has("User.id"))
+
+      query.push_str(r#"
+      followed as var(func: uid($a)) {
+        User.followsCommunity {
+          Community.posts {
+            filter1 as Post.comments
+          }
+        }
+      }"#);
+
+      // Comments where <User> <User.SavedComment> <Comment>
+      if self.saved_only {
+        query.push_str(r#"
+        saved as var(func: uid($a)) {
+          filter2 as User.savedComments
+        }"#);
+      }
     }
 
+    // Comments where <Comment> <Comment.creator> <User>
     if let Some(for_creator_id) = self.for_creator_id {
-      query = query.linked_predicate("Comment.creator")
-                   .filter(DFn::eq("uid", stringify!(for_creator_id)));
+
+      query.add_query_var(None)
+           .root_query(DFn::uid(for_creator_id))
+           .edge_as("User.comments", "filter_2")
+           .pop(1);
     };
 
+    // Comments posted in community, i.e.:
+    // [Comment] <Comment.post> [Post] <Post.community> [Community]
     if let Some(for_community_id) = self.for_community_id {
-      query = query.linked_predicate("Comment.post")
-                   .filter("eq(uid, {})", for_post_id)
-                   .linked_predicate("Post.community")
-                   .filter("eq(uid, {})", for_community_id)
+
+      query.add_query_var(None)
+            .root_query(DFn::uid(for_community_id))
+            .edge("Community.posts");
+            .filter_if("uid", self.for_post_id)
+            .edge_as("Post.comments", "filter_3");
+            .filter_if("allofterms", "content", search_term)
+            .pop(2);
     }
 
-    if let Some(for_post_id) = self.for_post_id {
-      query = query.filter(post_id.eq(for_post_id));
-    };
 
-    if let Some(search_term) = self.search_term {
-      query = query.filter(content.ilike(fuzzy_search(&search_term)));
-    };
-
+    // FIXME: what relationship do they mean?
+    // Comments where [User] <subscribe> [Community] <posts> [Post] <comments> [Comment]
     if let ListingType::Subscribed = self.listing_type {
       query = query.filter(subscribed.eq(true));
+
+      // Narrow down comments in communities that user is subscribed to
+      query.add_query_var(None)
+           .root_query(DFn::uid(my_user_id))
+           .edge("User.followsCommunity")
+           .edge("Community.posts")
+           .edge_as("Post.comments", "filter_1")
+           .pop(2);
     }
 
-    if self.saved_only {
-      query = query.filter(saved.eq(true));
-    }
+    // Make root query, using query vars
+    let num_filters = query.query_vars.len();
+    let uid_filters = (1..=num_filters).map(|i| format!("filter_{}", i))
+                                       .collect::<Vec<_>>()
+                                       .join(", ");
 
+    let candidates = format!("uid({})", uid_filters);
+    query = query.root_query(DFn::uid(candidates));
+
+    // Hot rank calculation
+    // https://github.com/LemmyNet/lemmy/blob/397f65c81ef17f4c7e5e2847155347ae1377e25b/server/migrations/2019-03-30-212058_create_post_view/up.sql
+    // math(10000*(score / max(score, -score))*log(1 + (score * cond(score<0,-1,1))) / pow(((since(now - published)/3600) + 2), 1.8))
+
+    // Filter by data and and order/sort
     query = match self.sort {
       SortType::Hot => query
         .order_by(hot_rank.desc())
         .then_order_by(published.desc()),
-      SortType::New => query.order_by(published.desc()),
-      SortType::TopAll => query.order_by(score.desc()),
+      SortType::New => query.order_by("published", "desc"),
+      SortType::TopAll => query.order_by("score", "desc"),
       SortType::TopYear => query
-        .filter(published.gt(now - 1.years()))
-        .order_by(score.desc()),
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::days(365)).to_string())
+        .order_by("score", "desc"),
       SortType::TopMonth => query
-        .filter(published.gt(now - 1.months()))
-        .order_by(score.desc()),
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::days(30)).to_string())
+        .order_by("score", "desc"),
       SortType::TopWeek => query
-        .filter(published.gt(now - 1.weeks()))
-        .order_by(score.desc()),
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::weeks(1)).to_string())
+        .order_by("score", "desc"),
       SortType::TopDay => query
-        .filter(published.gt(now - 1.days()))
-        .order_by(score.desc()),
+        .filter("gt", "published",
+        (naive_now() - chrono::Duration::days(1)).to_string())
+          .order_by("score", "desc"),
       // _ => query.order_by(published.desc()),
     };
+
+    
 
     let (limit, offset) = limit_and_offset(self.page, self.limit);
 
     // Note: deleted and removed comments are done on the front side
-    query
-      .limit(limit)
-      .offset(offset)
-      .load::<CommentView>(self.conn)
-  }
-}
+    let resp = query.execute();
 
-impl CommentView {
-  
-  pub fn read(
-    conn: &dgraph_tonic::Client,
-    from_comment_id: i32,
-    my_user_id: Option<i32>,
-  ) -> Result<Self, Error> {
-    use super::comment_view::comment_mview::dsl::*;
-    let mut query = comment_mview.into_boxed();
+    // TODO: load into CommentView
+    // - flatten (see serde flatten macro attributes)
+  }
+
+  /**
+   * List results of query.
+   */
+  pub fn list(self) -> Result<Vec<CommentView>, Error> {
+
+    let mut query = self.query;
+
+    let mut num_filters: usize = 0;
 
     // The view lets you pass a null user_id, if you're not logged in
-    if let Some(my_user_id) = my_user_id {
-      query = query.filter(user_id.eq(my_user_id));
-    } else {
-      query = query.filter(user_id.is_null());
+    // FIXME: does the CommentView depend on the user asking for it?
+    // Filter [Comment] <post> [Post] <community> [Community] <follower> [User]
+    if let Some(my_user_id) = self.my_user_id {
+
+
+      // Comments where [User] <follows> [Community] <posts> [Post] <comments> [Comment]
+      query.add_query_var(None)
+           .root_query(DFn::uid(my_user_id))
+           .edge("User.followsCommunity")
+           .edge("Community.posts")
+           .edge_as("Post.comments", "filter_1")
+           .pop(2);
+
+      // Comments where <User> <User.SavedComment> <Comment>
+      if self.saved_only {
+        query.add_query_var(None)
+              .root_query(DFn::uid(my_user_id))
+              .edge_as("User.savedComments", "filter_2")
+              .pop(1);
+      }
     }
 
-    query = query
-      .filter(id.eq(from_comment_id))
-      .order_by(published.desc());
+    // Comments where <Comment> <Comment.creator> <User>
+    if let Some(for_creator_id) = self.for_creator_id {
 
-    query.first::<Self>(conn)
+      query.add_query_var(None)
+           .root_query(DFn::uid(for_creator_id))
+           .edge_as("User.comments", "filter_2")
+           .pop(1);
+    };
+
+    // Comments posted in community, i.e.:
+    // [Comment] <Comment.post> [Post] <Post.community> [Community]
+    if let Some(for_community_id) = self.for_community_id {
+
+      query.add_query_var(None)
+            .root_query(DFn::uid(for_community_id))
+            .edge("Community.posts");
+            .filter_if("uid", self.for_post_id)
+            .edge_as("Post.comments", "filter_3");
+            .filter_if("allofterms", "content", search_term)
+            .pop(2);
+    }
+
+
+    // FIXME: what relationship do they mean?
+    // Comments where [User] <subscribe> [Community] <posts> [Post] <comments> [Comment]
+    if let ListingType::Subscribed = self.listing_type {
+      query = query.filter(subscribed.eq(true));
+
+      // Narrow down comments in communities that user is subscribed to
+      query.add_query_var(None)
+           .root_query(DFn::uid(my_user_id))
+           .edge("User.followsCommunity")
+           .edge("Community.posts")
+           .edge_as("Post.comments", "filter_1")
+           .pop(2);
+    }
+
+    // Make root query, using query vars
+    let num_filters = query.query_vars.len();
+    let uid_filters = (1..=num_filters).map(|i| format!("filter_{}", i))
+                                       .collect::<Vec<_>>()
+                                       .join(", ");
+
+    let candidates = format!("uid({})", uid_filters);
+    query = query.root_query(DFn::uid(candidates));
+
+    // Hot rank calculation
+    // https://github.com/LemmyNet/lemmy/blob/397f65c81ef17f4c7e5e2847155347ae1377e25b/server/migrations/2019-03-30-212058_create_post_view/up.sql
+    // math(10000*(score / max(score, -score))*log(1 + (score * cond(score<0,-1,1))) / pow(((since(now - published)/3600) + 2), 1.8))
+
+    // Filter by data and and order/sort
+    query = match self.sort {
+      SortType::Hot => query
+        .order_by(hot_rank.desc())
+        .then_order_by(published.desc()),
+      SortType::New => query.order_by("published", "desc"),
+      SortType::TopAll => query.order_by("score", "desc"),
+      SortType::TopYear => query
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::days(365)).to_string())
+        .order_by("score", "desc"),
+      SortType::TopMonth => query
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::days(30)).to_string())
+        .order_by("score", "desc"),
+      SortType::TopWeek => query
+        .filter("gt", "published",
+          (naive_now() - chrono::Duration::weeks(1)).to_string())
+        .order_by("score", "desc"),
+      SortType::TopDay => query
+        .filter("gt", "published",
+        (naive_now() - chrono::Duration::days(1)).to_string())
+          .order_by("score", "desc"),
+      // _ => query.order_by(published.desc()),
+    };
+
+    
+
+    let (limit, offset) = limit_and_offset(self.page, self.limit);
+
+    // Note: deleted and removed comments are done on the front side
+    let resp = query.execute();
+
+    // TODO: load into CommentView
+    // - flatten (see serde flatten macro attributes)
   }
 }
+
 
 #[derive(
   PartialEq, Debug, Serialize, Deserialize, Clone,

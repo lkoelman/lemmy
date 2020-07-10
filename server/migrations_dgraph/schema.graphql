@@ -44,6 +44,10 @@ type User {
     matrixUserId: String
     # Edges (non-scalar predicates)
     savedComments: [Comment] @dgraph(pred: "User.SavedComment")
+    followsCommunity: [Community] @hasInverse(field: "followers")
+    comments: [Comment] @hasInverse(field: "creator")
+    likesPost: [Post] @hasInverse(field: "likedBy")
+    likesComment: [Comment] @hasInverse(field: "likedBy")
 }
 
 type Post {
@@ -52,7 +56,7 @@ type Post {
     url: String
     body: String
     creator: User!
-    community: Community!
+    community: Community! @hasInverse(field: "posts")
     removed: Boolean!
     locked: Boolean!
     published: DateTime!
@@ -64,13 +68,16 @@ type Post {
     embedDescription: String
     embedHtml: String
     thumbnailUrl: String
+    comments: [Comment] @hasInverse(field: "post")
+    # Edges (non-scalar predicates)
+    likedBy: [User]
 }
 
 
 type Comment {
     id: ID!
-    creator: User!
-    post: Post!
+    creator: User! @hasInverse(field: "comments")
+    post: Post! @hasInverse(field: "comments")
     parent: Comment
     content: String!
     removed: Boolean!
@@ -79,7 +86,7 @@ type Comment {
     updated: DateTime
     deleted: Boolean!
     # Edges (non-scalar predicated)
-    liked: [User] @dgraph(pred: "Comment.UserLike")
+    likedBy: [User] @dgraph(pred: "Comment.UserLike")
 }
 
 type PrivateMessage {
@@ -121,7 +128,9 @@ type Community {
     # Edges (non-scalar predicated)
     moderators: [User] @dgraph(pred: "Community.Moderator")
     bannedUsers: [User] @dgraph(pred: "Community.BanUser")
-    followers: [User] @dgraph(pred: "Community.Follower")
+    followers: [User] @hasInverse(field: "followsCommunity")
+    posts: [Post] @hasInverse(field: "community")
+    # followers: [User] @dgraph(pred: "Community.Follower")
 }
 
 ###############################################################################

@@ -70,6 +70,13 @@ pub fn naive_now() -> NaiveDateTime {
   chrono::prelude::Utc::now().naive_utc()
 }
 
+pub fn now_str(format: Option<&str>) -> String {
+  match format {
+    Some(fmt) => naive_now().format(fmt).to_string(),
+    None => naive_now().to_string(), // 2014-11-28 12:00:09 UTC
+  }
+}
+
 pub fn naive_from_unix(time: i64) -> NaiveDateTime {
   NaiveDateTime::from_timestamp(time, 0)
 }
